@@ -1,0 +1,45 @@
+export const FONTS = {
+  // Poppins font ailesi
+  poppins: {
+    thin: 'Poppins-Thin',
+    thinItalic: 'Poppins-ThinItalic',
+    extraLight: 'Poppins-ExtraLight',
+    extraLightItalic: 'Poppins-ExtraLightItalic',
+    light: 'Poppins-Light',
+    lightItalic: 'Poppins-LightItalic',
+    regular: 'Poppins-Regular',
+    italic: 'Poppins-Italic',
+    medium: 'Poppins-Medium',
+    mediumItalic: 'Poppins-MediumItalic',
+    semiBold: 'Poppins-SemiBold',
+    semiBoldItalic: 'Poppins-SemiBoldItalic',
+    bold: 'Poppins-Bold',
+    boldItalic: 'Poppins-BoldItalic',
+    extraBold: 'Poppins-ExtraBold',
+    extraBoldItalic: 'Poppins-ExtraBoldItalic',
+    black: 'Poppins-Black',
+    blackItalic: 'Poppins-BlackItalic',
+  },
+  
+  // Inter font ailesi
+  inter: {
+    thin: 'Inter_18pt-Thin',
+    thinItalic: 'Inter_18pt-ThinItalic',
+    extraLight: 'Inter_18pt-ExtraLight',
+    extraLightItalic: 'Inter_18pt-ExtraLightItalic',
+    light: 'Inter_18pt-Light',
+    lightItalic: 'Inter_18pt-LightItalic',
+    regular: 'Inter_18pt-Regular',
+    italic: 'Inter_18pt-Italic',
+    medium: 'Inter_18pt-Medium',
+    mediumItalic: 'Inter_18pt-MediumItalic',
+    semiBold: 'Inter_18pt-SemiBold',
+    semiBoldItalic: 'Inter_18pt-SemiBoldItalic',
+    bold: 'Inter_18pt-Bold',
+    boldItalic: 'Inter_18pt-BoldItalic',
+    extraBold: 'Inter_18pt-ExtraBold',
+    extraBoldItalic: 'Inter_18pt-ExtraBoldItalic',
+    black: 'Inter_18pt-Black',
+    blackItalic: 'Inter_18pt-BlackItalic',
+  }
+}; 
