@@ -1,17 +1,28 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, StatusBar, Image } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Platform,
+  StatusBar,
+  Image,
+  SafeAreaView,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONTS } from '../theme/fonts';
 import DoktorKarti from '../components/DoktorKarti';
 import BackgroundLogo from '../components/BackgroundLogo';
 
-const defaultAvatar = { uri: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png' };
+const defaultAvatar = {
+  uri: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+};
 
 const CategoryItem = ({ icon, title }) => (
   <TouchableOpacity style={styles.categoryItem}>
-    <View style={styles.categoryIcon}>
-      {icon}
-    </View>
+    <View style={styles.categoryIcon}>{icon}</View>
     <Text style={styles.categoryTitle}>{title}</Text>
   </TouchableOpacity>
 );
@@ -21,7 +32,9 @@ const RecentDoctorItem = ({ image, name }) => (
     <View style={styles.recentDoctorImageContainer}>
       <Image source={image} style={styles.recentDoctorImage} />
     </View>
-    <Text style={styles.recentDoctorName} numberOfLines={1}>{name}</Text>
+    <Text style={styles.recentDoctorName} numberOfLines={1}>
+      {name}
+    </Text>
   </TouchableOpacity>
 );
 
@@ -44,29 +57,31 @@ const RandevuAnasayfa = ({ navigation }) => {
   ];
 
   return (
-    <View style={styles.container}>
-      <BackgroundLogo />
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name='arrow-back' size={24} color='#000' />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Randevu - Anasayfa</Text>
+        <Text style={styles.headerTitle}>Randevu</Text>
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+      <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
+        <BackgroundLogo />
+
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#666" />
+          <MaterialIcons name='search' size={20} color='#666' />
           <TextInput
             style={styles.searchInput}
-            placeholder="Randevu İçin Doktor veya Poliklinik Ara..."
-            placeholderTextColor="#666"
+            placeholder='Doktor veya Poliklinik Ara...'
+            placeholderTextColor='#666'
           />
         </View>
-{/* 
+        {/* 
         <Text style={styles.sectionTitle}>Category</Text>
         <View style={styles.categoryGrid}>
           {categories.map((item, index) => (
@@ -75,24 +90,28 @@ const RandevuAnasayfa = ({ navigation }) => {
         </View> */}
 
         <Text style={styles.sectionTitle}>Önerilen Doktorlar</Text>
-        <DoktorKarti
-          image={defaultAvatar}
-          name="Dr. Erdi TÜZÜN"
-          specialty="Kardiyolog"
-          experience={8}
-          onPress={() => navigation.navigate('DoktorDetay', {
-            doctor: {
-              image: defaultAvatar,
-              name: "Dr. Erdi TÜZÜN",
-              specialty: "Kardiyolog",
-              experience: 8
+        <View style={{ paddingHorizontal: 20 }}>
+          <DoktorKarti
+            image={defaultAvatar}
+            name='Dr. Erdi TÜZÜN'
+            specialty='Kardiyolog'
+            experience={8}
+            onPress={() =>
+              navigation.navigate('DoktorDetay', {
+                doctor: {
+                  image: defaultAvatar,
+                  name: 'Dr. Erdi TÜZÜN',
+                  specialty: 'Kardiyolog',
+                  experience: 8,
+                },
+              })
             }
-          })}
-        />
+          />
+        </View>
 
         <Text style={styles.sectionTitle}>Geçmiş Randevularınız</Text>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.recentDoctorsScroll}
         >
@@ -104,8 +123,40 @@ const RandevuAnasayfa = ({ navigation }) => {
             />
           ))}
         </ScrollView>
+
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Tüm Doktorlarımız</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('TopDoctors')}
+              style={styles.seeAllButton}
+            >
+              <Text style={styles.seeAllText}>Tümünü Gör</Text>
+              <MaterialIcons
+                name='arrow-forward-ios'
+                size={14}
+                color='#008B8B'
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.allDoctorsContainer}>
+            <TouchableOpacity
+              style={styles.doctorsCard}
+              onPress={() => navigation.navigate('TopDoctors')}
+            >
+              <View style={styles.doctorsCardContent}>
+                <MaterialIcons name='people' size={24} color='#008B8B' />
+                <Text style={styles.doctorsCardText}>
+                  Uzman doktorlarımızla tanışın
+                </Text>
+              </View>
+              <MaterialIcons name='arrow-forward-ios' size={20} color='#666' />
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -117,21 +168,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 20 : 40,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: FONTS.inter.semiBold,
     color: '#000',
-    marginLeft: 15,
   },
-  content: {
-    flex: 1,
+  headerRight: {
+    width: 24,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 140,
+    paddingBottom: 20,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -139,6 +192,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
     padding: 12,
+    marginHorizontal: 20,
+    marginTop: 20,
     marginBottom: 20,
   },
   searchInput: {
@@ -154,12 +209,13 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 15,
     marginTop: 20,
+    marginHorizontal: 20,
   },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginHorizontal: -5,
+    marginHorizontal: 15,
   },
   categoryItem: {
     width: '25%',
@@ -183,7 +239,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   recentDoctorsScroll: {
-    marginLeft: -5,
+    paddingHorizontal: 20,
   },
   recentDoctorItem: {
     alignItems: 'center',
@@ -207,6 +263,56 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+  sectionContainer: {
+    paddingVertical: 10,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 20,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 5,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#008B8B',
+    marginRight: 5,
+    fontFamily: FONTS.inter.medium,
+  },
+  doctorsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  doctorsCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  doctorsCardText: {
+    fontSize: 16,
+    color: '#000',
+    marginLeft: 15,
+    fontFamily: FONTS.inter.medium,
+  },
+  allDoctorsContainer: {
+    paddingHorizontal: 20,
+  },
 });
 
-export default RandevuAnasayfa; 
+export default RandevuAnasayfa;

@@ -18,6 +18,7 @@ import DoktorDetay from './src/screens/DoktorDetay';
 import RandevularScreen from './src/screens/RandevularScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AmbulansCagirScreen from './src/screens/AmbulansCagirScreen';
+import TopDoctorsScreen from './src/screens/TopDoctorsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -54,46 +55,46 @@ const TabNavigator = () => {
           fontSize: 12,
           fontFamily: FONTS.inter.medium,
           paddingBottom: 3,
-        }
+        },
       }}
     >
       <Tab.Screen
-        name="Home"
+        name='Home'
         component={PolikliniklerScreen}
         options={{
           tabBarLabel: 'Poliklinikler',
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="home" size={size} color={color} />
+            <MaterialIcons name='home' size={size} color={color} />
           ),
         }}
       />
       <Tab.Screen
-        name="Randevu"
+        name='Randevu'
         component={RandevuAnasayfa}
         options={{
           tabBarLabel: 'Randevu',
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="calendar-today" size={size} color={color} />
+            <MaterialIcons name='calendar-today' size={size} color={color} />
           ),
         }}
       />
       <Tab.Screen
-        name="Calendar"
+        name='Calendar'
         component={RandevularScreen}
         options={{
           tabBarLabel: 'Randevularım',
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="calendar-today" size={size} color={color} />
+            <MaterialIcons name='calendar-today' size={size} color={color} />
           ),
         }}
       />
       <Tab.Screen
-        name="Profile"
+        name='Profile'
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profil',
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="person" size={size} color={color} />
+            <MaterialIcons name='person' size={size} color={color} />
           ),
         }}
       />
@@ -114,7 +115,7 @@ export default function App() {
     async function prepare() {
       try {
         await SplashScreen.preventAutoHideAsync();
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       } catch (e) {
         console.warn(e);
       }
@@ -135,28 +136,32 @@ export default function App() {
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#ffffff"
+        barStyle='dark-content'
+        backgroundColor='#ffffff'
         translucent={false}
       />
       <NavigationContainer>
-        <Stack.Navigator 
-          initialRouteName="Welcome"
+        <Stack.Navigator
+          initialRouteName='Welcome'
           screenOptions={{
             headerShown: false,
             contentStyle: {
-              backgroundColor: '#ffffff'
-            }
+              backgroundColor: '#ffffff',
+            },
           }}
         >
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="SignUp" component={SignUpScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="MainApp" component={TabNavigator} />
-          <Stack.Screen name="DoktorDetay" component={DoktorDetay} />
-          <Stack.Screen name="Randevular" component={RandevularScreen} />
-          <Stack.Screen name="AmbulansCagir" component={AmbulansCagirScreen} />
+          <Stack.Screen name='Welcome' component={WelcomeScreen} />
+          <Stack.Screen name='Login' component={LoginScreen} />
+          <Stack.Screen name='SignUp' component={SignUpScreen} />
+          <Stack.Screen
+            name='ForgotPassword'
+            component={ForgotPasswordScreen}
+          />
+          <Stack.Screen name='MainApp' component={TabNavigator} />
+          <Stack.Screen name='DoktorDetay' component={DoktorDetay} />
+          <Stack.Screen name='Randevular' component={RandevularScreen} />
+          <Stack.Screen name='AmbulansCagir' component={AmbulansCagirScreen} />
+          <Stack.Screen name='TopDoctors' component={TopDoctorsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </View>

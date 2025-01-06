@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, StatusBar, Platform, Modal, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  StatusBar,
+  Platform,
+  Modal,
+  ScrollView,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import BackButton from '../components/BackButton';
@@ -17,7 +28,7 @@ const SignUpScreen = () => {
     email: '',
     phone: '',
     password: '',
-    agreeToTerms: false
+    agreeToTerms: false,
   });
 
   const formatPhoneNumber = (text) => {
@@ -28,7 +39,9 @@ const SignUpScreen = () => {
     } else if (numbers.length <= 6) {
       return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
     } else if (numbers.length <= 10) {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)} - ${numbers.slice(6)}`;
+      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)} - ${numbers.slice(
+        6
+      )}`;
     }
     return numbers;
   };
@@ -37,29 +50,41 @@ const SignUpScreen = () => {
     if (field === 'tcKimlik') {
       const numericValue = value.replace(/[^0-9]/g, '');
       if (numericValue.length <= 11) {
-        setFormData(prev => ({ ...prev, [field]: numericValue }));
+        setFormData((prev) => ({ ...prev, [field]: numericValue }));
       }
     } else if (field === 'phone') {
       const numericValue = value.replace(/[^\d]/g, '');
-      if (numericValue.length <= 10) { 
+      if (numericValue.length <= 10) {
         const formattedNumber = formatPhoneNumber(numericValue);
-        setFormData(prev => ({ ...prev, [field]: formattedNumber }));
+        setFormData((prev) => ({ ...prev, [field]: formattedNumber }));
       }
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData((prev) => ({ ...prev, [field]: value }));
     }
   };
 
   const getEmailValidationStyle = () => {
     if (formData.email.length === 0) return styles.inputWrapper;
-    return isValidEmail(formData.email) 
+    return isValidEmail(formData.email)
       ? [styles.inputWrapper, styles.validInput]
       : [styles.inputWrapper, styles.invalidInput];
   };
 
+  const isFormValid = () => {
+    return (
+      formData.email.trim() !== '' &&
+      isValidEmail(formData.email) &&
+      formData.password.trim() !== '' &&
+      formData.name.trim() !== '' &&
+      formData.tcKimlik.trim().length === 11 &&
+      formData.phone.trim() !== '' &&
+      formData.agreeToTerms
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
       <View style={styles.header}>
         <BackButton />
         <Text style={styles.headerTitle}>Kayıt Ol</Text>
@@ -67,109 +92,141 @@ const SignUpScreen = () => {
       </View>
 
       <View style={styles.mainContent}>
-      <BackgroundLogo />
+        <BackgroundLogo />
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
-            <MaterialIcons name="person" size={20} color="#666" style={styles.inputIcon} />
+            <MaterialIcons
+              name='person'
+              size={20}
+              color='#666'
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="Ad Soyad"
-              placeholderTextColor="#666"
+              placeholder='Ad Soyad'
+              placeholderTextColor='#666'
               value={formData.name}
               onChangeText={(text) => handleInputChange('name', text)}
             />
           </View>
 
           <View style={styles.inputWrapper}>
-            <MaterialIcons name="credit-card" size={20} color="#666" style={styles.inputIcon} />
+            <MaterialIcons
+              name='credit-card'
+              size={20}
+              color='#666'
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="TC Kimlik Numarası"
-              placeholderTextColor="#666"
-              keyboardType="numeric"
+              placeholder='TC Kimlik Numarası'
+              placeholderTextColor='#666'
+              keyboardType='numeric'
               maxLength={11}
               value={formData.tcKimlik}
               onChangeText={(text) => handleInputChange('tcKimlik', text)}
             />
-            {formData.tcKimlik.length > 0 && (
-              formData.tcKimlik.length === 11 ? (
-                <MaterialIcons name="check-circle" size={20} color="#4CAF50" />
+            {formData.tcKimlik.length > 0 &&
+              (formData.tcKimlik.length === 11 ? (
+                <MaterialIcons name='check-circle' size={20} color='#4CAF50' />
               ) : (
-                <Text style={styles.characterCount}>{formData.tcKimlik.length}/11</Text>
-              )
-            )}
+                <Text style={styles.characterCount}>
+                  {formData.tcKimlik.length}/11
+                </Text>
+              ))}
           </View>
 
           <View style={getEmailValidationStyle()}>
-            <MaterialIcons 
-              name="email" 
-              size={20} 
-              color={formData.email.length > 0 ? (isValidEmail(formData.email) ? '#4CAF50' : '#FF5252') : '#666'} 
-              style={styles.inputIcon} 
+            <MaterialIcons
+              name='email'
+              size={20}
+              color={
+                formData.email.length > 0
+                  ? isValidEmail(formData.email)
+                    ? '#4CAF50'
+                    : '#FF5252'
+                  : '#666'
+              }
+              style={styles.inputIcon}
             />
             <TextInput
               style={styles.input}
-              placeholder="E-posta Adresi"
-              placeholderTextColor="#666"
-              keyboardType="email-address"
-              autoCapitalize="none"
+              placeholder='E-posta Adresi'
+              placeholderTextColor='#666'
+              keyboardType='email-address'
+              autoCapitalize='none'
               value={formData.email}
               onChangeText={(text) => handleInputChange('email', text)}
             />
             {formData.email.length > 0 && (
-              <MaterialIcons 
-                name={isValidEmail(formData.email) ? "check-circle" : "error"} 
-                size={20} 
-                color={isValidEmail(formData.email) ? '#4CAF50' : '#FF5252'} 
+              <MaterialIcons
+                name={isValidEmail(formData.email) ? 'check-circle' : 'error'}
+                size={20}
+                color={isValidEmail(formData.email) ? '#4CAF50' : '#FF5252'}
               />
             )}
           </View>
 
           <View style={styles.inputWrapper}>
-            <MaterialIcons name="phone" size={20} color="#666" style={styles.inputIcon} />
+            <MaterialIcons
+              name='phone'
+              size={20}
+              color='#666'
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="Telefon Numarası"
-              placeholderTextColor="#666"
-              keyboardType="numeric"
+              placeholder='Telefon Numarası'
+              placeholderTextColor='#666'
+              keyboardType='numeric'
               value={formData.phone}
               onChangeText={(text) => handleInputChange('phone', text)}
             />
           </View>
 
           <View style={styles.inputWrapper}>
-            <MaterialIcons name="lock" size={20} color="#666" style={styles.inputIcon} />
+            <MaterialIcons
+              name='lock'
+              size={20}
+              color='#666'
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="Şifre"
+              placeholder='Şifre'
               secureTextEntry={!showPassword}
-              placeholderTextColor="#666"
+              placeholderTextColor='#666'
               value={formData.password}
               onChangeText={(text) => handleInputChange('password', text)}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons 
-                name={showPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color="#666" 
+              <Ionicons
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={20}
+                color='#666'
                 style={styles.eyeIcon}
               />
             </TouchableOpacity>
           </View>
 
           <View style={styles.termsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.checkbox}
-              onPress={() => handleInputChange('agreeToTerms', !formData.agreeToTerms)}
+              onPress={() =>
+                handleInputChange('agreeToTerms', !formData.agreeToTerms)
+              }
             >
               {formData.agreeToTerms && (
-                <MaterialIcons name="check" size={16} color="#008B8B" />
+                <MaterialIcons name='check' size={16} color='#008B8B' />
               )}
             </TouchableOpacity>
             <View style={styles.termsTextContainer}>
               <Text style={styles.termsText}>
                 Kullanım koşullarını{' '}
-                <Text style={styles.termsLink} onPress={() => setShowTerms(true)}>
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => setShowTerms(true)}
+                >
                   kabul ediyorum
                 </Text>
               </Text>
@@ -177,12 +234,12 @@ const SignUpScreen = () => {
           </View>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.signUpButton,
-            !formData.agreeToTerms && styles.signUpButtonDisabled
+            !isFormValid() && styles.signUpButtonDisabled,
           ]}
-          disabled={!formData.agreeToTerms}
+          disabled={!isFormValid()}
         >
           <Text style={styles.signUpButtonText}>Kayıt Ol</Text>
         </TouchableOpacity>
@@ -195,9 +252,9 @@ const SignUpScreen = () => {
         </View>
       </View>
 
-        {/* Modal kısmı burası - Kullanım koşullarını kabul ediyorum kısmı */}
+      {/* Modal kısmı burası - Kullanım koşullarını kabul ediyorum kısmı */}
       <Modal
-        animationType="slide"
+        animationType='slide'
         transparent={true}
         visible={showTerms}
         onRequestClose={() => setShowTerms(false)}
@@ -207,26 +264,29 @@ const SignUpScreen = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Kullanım Koşulları</Text>
               <TouchableOpacity onPress={() => setShowTerms(false)}>
-                <MaterialIcons name="close" size={24} color="#000" />
+                <MaterialIcons name='close' size={24} color='#000' />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalBody}>
               <Text style={styles.modalText}>
                 1. Gizlilik ve Güvenlik{'\n\n'}
-                Kişisel verileriniz güvenli bir şekilde saklanacak ve üçüncü taraflarla paylaşılmayacaktır.{'\n\n'}
+                Kişisel verileriniz güvenli bir şekilde saklanacak ve üçüncü
+                taraflarla paylaşılmayacaktır.{'\n\n'}
                 2. Hizmet Kullanımı{'\n\n'}
-                Sistemimiz üzerinden randevu alırken doğru ve güncel bilgiler kullanmanız gerekmektedir.{'\n\n'}
+                Sistemimiz üzerinden randevu alırken doğru ve güncel bilgiler
+                kullanmanız gerekmektedir.{'\n\n'}
                 3. Sorumluluklar{'\n\n'}
-                Randevunuza gelemeyecekseniz en az 24 saat öncesinden iptal etmeniz gerekmektedir.{'\n\n'}
+                Randevunuza gelemeyecekseniz en az 24 saat öncesinden iptal
+                etmeniz gerekmektedir.{'\n\n'}
                 4. İletişim{'\n\n'}
-                Sistemle ilgili tüm sorunlarınızı destek ekibimize bildirebilirsiniz.
+                Sistemle ilgili tüm sorunlarınızı destek ekibimize
+                bildirebilirsiniz.
               </Text>
             </ScrollView>
           </View>
         </View>
       </Modal>
       {/* Modal kısmı burası - Kullanım koşullarını kabul ediyorum kısmı */}
-      
     </SafeAreaView>
   );
 };
@@ -386,6 +446,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF5252',
   },
+  disabledButton: {
+    backgroundColor: '#cccccc',
+    opacity: 0.7,
+  },
 });
 
-export default SignUpScreen; 
+export default SignUpScreen;
