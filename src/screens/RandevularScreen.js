@@ -1,137 +1,190 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, StatusBar } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  FlatList,
+  StatusBar,
+  Platform,
+  Alert,
+  Image,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONTS } from '../theme/fonts';
-import BackgroundLogo from '../components/BackgroundLogo';
+import { Swipeable } from 'react-native-gesture-handler';
+import BackButton from '../components/BackButton';
 
-const defaultAvatar = { uri: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png' };
+const defaultAvatar = {
+  uri: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+};
 
-const TabButton = ({ title, isActive, onPress }) => (
-  <TouchableOpacity 
-    style={[styles.tabButton, isActive && styles.activeTabButton]} 
-    onPress={onPress}
-  >
-    <Text style={[styles.tabButtonText, isActive && styles.activeTabButtonText]}>
-      {title}
-    </Text>
-  </TouchableOpacity>
-);
+const randevular = [
+  {
+    id: '1',
+    doktor: 'Dr. Ersan CENGİZ',
+    bolum: 'Kardiyoloji',
+    tarih: '10 Ocak 2024',
+    saat: '14:30',
+    image: defaultAvatar,
+  },
+  {
+    id: '2',
+    doktor: 'Dr. Serhat KORKMAZ',
+    bolum: 'Psikoloji',
+    tarih: '12 Ocak 2024',
+    saat: '10:15',
+    image: defaultAvatar,
+  },
+  {
+    id: '3',
+    doktor: 'Dr. Mehmet KAYA',
+    bolum: 'Ortopedi',
+    tarih: '15 Ocak 2024',
+    saat: '09:00',
+    image: defaultAvatar,
+  },
+];
 
-const RandevuKarti = ({ doctor, specialty, date, time, status, onCancel, onReschedule }) => (
-  <View style={styles.appointmentCard}>
-    <View style={styles.appointmentHeader}>
-      <View style={styles.doctorInfo}>
-        <Text style={styles.doctorName}>{doctor}</Text>
-        <Text style={styles.doctorSpecialty}>{specialty}</Text>
+const RandevuKarti = ({ randevu, onDelete, onReschedule }) => {
+  const swipeableRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (swipeableRef.current) {
+        swipeableRef.current.close();
+      }
+    };
+  }, []);
+
+  const renderRightActions = (progress, dragX) => {
+    return (
+      <View style={styles.rightAction}>
+        <MaterialIcons name='delete' size={24} color='#fff' />
+        <Text style={styles.actionText}>Sil</Text>
       </View>
-      <Image source={defaultAvatar} style={styles.doctorImage} />
-    </View>
-    
-    <View style={styles.appointmentDetails}>
-      <View style={styles.detailItem}>
-        <MaterialIcons name="event" size={16} color="#666" />
-        <Text style={styles.detailText}>{date}</Text>
+    );
+  };
+
+  const renderLeftActions = (progress, dragX) => {
+    return (
+      <View style={styles.leftAction}>
+        <MaterialIcons name='event' size={24} color='#fff' />
+        <Text style={styles.actionText}>Yeniden Planla</Text>
       </View>
-      <View style={styles.detailItem}>
-        <MaterialIcons name="access-time" size={16} color="#666" />
-        <Text style={styles.detailText}>{time}</Text>
-      </View>
-      <View style={styles.detailItem}>
-        <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
-        <Text style={[styles.detailText, { color: '#4CAF50' }]}>Onaylandı</Text>
-      </View>
-    </View>
+    );
+  };
 
-    <View style={styles.appointmentActions}>
-      <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-        <Text style={styles.cancelButtonText}>İptal Et</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.rescheduleButton} onPress={onReschedule}>
-        <Text style={styles.rescheduleButtonText}>Yeniden Planla</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-);
+  const handleRightOpen = () => {
+    Alert.alert(
+      'Randevu İptal Et',
+      'Bu randevuyu iptal etmek istediğinize emin misiniz?',
+      [
+        {
+          text: 'Hayır',
+          style: 'cancel',
+          onPress: () => swipeableRef.current.close(),
+        },
+        {
+          text: 'Evet',
+          onPress: () => {
+            onDelete(randevu.id);
+            swipeableRef.current.close();
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
 
-const RandevularScreen = () => {
-  const [aktifTab, setAktifTab] = useState('gelecek');
-
-  const gelecekRandevular = [
-    {
-      doctor: 'Dr. Erdi Tüzün',
-      specialty: 'Kardiyolog',
-      date: '05/01/2025',
-      time: '10:30 ÖÖ',
-      status: 'onaylandı'
-    },
-    {
-      doctor: 'Dr. Ersan CENGİZ',
-      specialty: 'Psikiyatr',
-      date: '06/01/2025',
-      time: '16:30 ÖS',
-      status: 'onaylandı'
-    }
-  ];
-
-  const tamamlananRandevular = [];
-  const iptalEdilenRandevular = [];
-
-  const randevulariGoster = () => {
-    let randevular = [];
-    switch (aktifTab) {
-      case 'gelecek':
-        randevular = gelecekRandevular;
-        break;
-      case 'tamamlanan':
-        randevular = tamamlananRandevular;
-        break;
-      case 'iptal':
-        randevular = iptalEdilenRandevular;
-        break;
-    }
-
-    return randevular.map((randevu, index) => (
-      <RandevuKarti
-        key={index}
-        {...randevu}
-        onCancel={() => {}}
-        onReschedule={() => {}}
-      />
-    ));
+  const handleLeftOpen = () => {
+    onReschedule(randevu);
+    swipeableRef.current.close();
   };
 
   return (
-    <View style={styles.container}>
-      <BackgroundLogo />
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      renderLeftActions={renderLeftActions}
+      onSwipeableRightOpen={handleRightOpen}
+      onSwipeableLeftOpen={handleLeftOpen}
+      overshootLeft={false}
+      overshootRight={false}
+    >
+      <View style={styles.card}>
+        <View style={styles.cardContent}>
+          <Image source={randevu.image} style={styles.doctorImage} />
+          <View style={styles.cardInfo}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.doctorName}>{randevu.doktor}</Text>
+              <View style={styles.departmentContainer}>
+                <MaterialIcons
+                  name='local-hospital'
+                  size={16}
+                  color='#008B8B'
+                />
+                <Text style={styles.department}>{randevu.bolum}</Text>
+              </View>
+            </View>
+            <View style={styles.cardBody}>
+              <View style={styles.infoRow}>
+                <MaterialIcons name='event' size={16} color='#008B8B' />
+                <Text style={styles.infoText}>{randevu.tarih}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <MaterialIcons name='access-time' size={16} color='#008B8B' />
+                <Text style={styles.infoText}>{randevu.saat}</Text>
+              </View>
+              <View style={styles.warningContainer}>
+                <MaterialIcons name='info' size={16} color='#FFA500' />
+                <Text style={styles.warningText}>
+                  Lütfen randevunuzdan 15 dakika önce hastanemizde hazır
+                  bulunun.
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Swipeable>
+  );
+};
+
+const RandevularScreen = ({ navigation }) => {
+  const [appointments, setAppointments] = useState(randevular);
+
+  const handleDelete = (id) => {
+    setAppointments(appointments.filter((randevu) => randevu.id !== id));
+  };
+
+  const handleReschedule = (randevu) => {
+    navigation.navigate('Randevu', { rescheduleData: randevu });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
       <View style={styles.header}>
+        <BackButton />
         <Text style={styles.headerTitle}>Randevularım</Text>
-        <TouchableOpacity style={styles.notificationButton}>
-          <MaterialIcons name="notifications-none" size={24} color="#000" />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.tabContainer}>
-        <TabButton
-          title="Gelecek"
-          isActive={aktifTab === 'gelecek'}
-          onPress={() => setAktifTab('gelecek')}
-        />
-        <TabButton
-          title="Tamamlanan"
-          isActive={aktifTab === 'tamamlanan'}
-          onPress={() => setAktifTab('tamamlanan')}
-        />
-        <TabButton
-          title="İptal Edilen"
-          isActive={aktifTab === 'iptal'}
-          onPress={() => setAktifTab('iptal')}
-        />
-      </View>
-
-      <View style={styles.appointmentList}>
-        {randevulariGoster()}
-      </View>
-    </View>
+      <FlatList
+        data={appointments}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <RandevuKarti
+            randevu={item}
+            onDelete={handleDelete}
+            onReschedule={handleReschedule}
+          />
+        )}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 };
 
@@ -144,131 +197,129 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 20 : 40,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 20,
     fontFamily: FONTS.inter.semiBold,
     color: '#000',
   },
-  notificationButton: {
-    padding: 8,
+  listContainer: {
+    padding: 20,
   },
-  tabContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    borderRadius: 17,
-    backgroundColor: '#F0F0F0',
-    alignItems: 'center',
-  },
-  activeTabButton: {
-    backgroundColor: '#008B8B',
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontFamily: FONTS.inter.medium,
-    color: '#666',
-  },
-  activeTabButtonText: {
-    color: '#fff',
-  },
-  appointmentList: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  appointmentCard: {
+  card: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    marginBottom: 15,
+    marginHorizontal: 2,
+    marginVertical: 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 0,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  appointmentHeader: {
+  cardContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  doctorInfo: {
+  doctorImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 15,
+  },
+  cardInfo: {
     flex: 1,
   },
+  cardHeader: {
+    marginBottom: 10,
+  },
   doctorName: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: FONTS.inter.semiBold,
     color: '#000',
     marginBottom: 4,
   },
-  doctorSpecialty: {
-    fontSize: 14,
-    fontFamily: FONTS.inter.regular,
-    color: '#666',
-  },
-  doctorImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  appointmentDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  detailItem: {
+  departmentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  detailText: {
+  department: {
+    fontSize: 14,
+    fontFamily: FONTS.inter.regular,
+    color: '#008B8B',
     marginLeft: 4,
+  },
+  cardBody: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  infoText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontFamily: FONTS.inter.medium,
+    color: '#666',
+  },
+  rightAction: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    marginBottom: 15,
+    marginTop: 2,
+    marginRight: 2,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  leftAction: {
+    backgroundColor: '#008B8B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    marginBottom: 15,
+    marginTop: 2,
+    marginLeft: 2,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+  },
+  actionText: {
+    color: '#fff',
+    fontFamily: FONTS.inter.medium,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  warningText: {
+    marginLeft: 8,
     fontSize: 12,
     fontFamily: FONTS.inter.regular,
-    color: '#666',
-  },
-  appointmentActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
+    color: '#FFA500',
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
-    marginRight: 8,
-  },
-  cancelButtonText: {
-    fontSize: 14,
-    fontFamily: FONTS.inter.medium,
-    color: '#666',
-    textAlign: 'center',
-  },
-  rescheduleButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: '#008B8B',
-    marginLeft: 8,
-  },
-  rescheduleButtonText: {
-    fontSize: 14,
-    fontFamily: FONTS.inter.medium,
-    color: '#fff',
-    textAlign: 'center',
   },
 });
 
-export default RandevularScreen; 
+export default RandevularScreen;

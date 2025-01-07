@@ -7,6 +7,7 @@ import { useFonts } from 'expo-font';
 import { FONTS } from './src/theme/fonts';
 import { StatusBar, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -18,7 +19,7 @@ import DoktorDetay from './src/screens/DoktorDetay';
 import RandevularScreen from './src/screens/RandevularScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AmbulansCagirScreen from './src/screens/AmbulansCagirScreen';
-import TopDoctorsScreen from './src/screens/TopDoctorsScreen';
+import TumDoktorlarEkrani from './src/screens/TumDoktorlarEkrani';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -79,6 +80,16 @@ const TabNavigator = () => {
         }}
       />
       <Tab.Screen
+        name='TumDoktorlarEkrani'
+        component={TumDoktorlarEkrani}
+        options={{
+          tabBarLabel: 'Doktorlar',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name='people' size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name='Calendar'
         component={RandevularScreen}
         options={{
@@ -134,36 +145,44 @@ export default function App() {
   }
 
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <StatusBar
-        barStyle='dark-content'
-        backgroundColor='#ffffff'
-        translucent={false}
-      />
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName='Welcome'
-          screenOptions={{
-            headerShown: false,
-            contentStyle: {
-              backgroundColor: '#ffffff',
-            },
-          }}
-        >
-          <Stack.Screen name='Welcome' component={WelcomeScreen} />
-          <Stack.Screen name='Login' component={LoginScreen} />
-          <Stack.Screen name='SignUp' component={SignUpScreen} />
-          <Stack.Screen
-            name='ForgotPassword'
-            component={ForgotPasswordScreen}
-          />
-          <Stack.Screen name='MainApp' component={TabNavigator} />
-          <Stack.Screen name='DoktorDetay' component={DoktorDetay} />
-          <Stack.Screen name='Randevular' component={RandevularScreen} />
-          <Stack.Screen name='AmbulansCagir' component={AmbulansCagirScreen} />
-          <Stack.Screen name='TopDoctors' component={TopDoctorsScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+        <StatusBar
+          barStyle='dark-content'
+          backgroundColor='#ffffff'
+          translucent={false}
+        />
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName='Welcome'
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: '#ffffff',
+              },
+            }}
+          >
+            <Stack.Screen name='Welcome' component={WelcomeScreen} />
+            <Stack.Screen name='Login' component={LoginScreen} />
+            <Stack.Screen name='SignUp' component={SignUpScreen} />
+            <Stack.Screen
+              name='ForgotPassword'
+              component={ForgotPasswordScreen}
+            />
+            <Stack.Screen name='MainApp' component={TabNavigator} />
+            <Stack.Screen name='DoktorDetay' component={DoktorDetay} />
+            <Stack.Screen name='Randevular' component={RandevularScreen} />
+            <Stack.Screen
+              name='AmbulansCagir'
+              component={AmbulansCagirScreen}
+            />
+            <Stack.Screen
+              name='TumDoktorlarEkrani'
+              component={TumDoktorlarEkrani}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </View>
+    </GestureHandlerRootView>
   );
 }

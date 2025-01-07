@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { FONTS } from '../theme/fonts';
@@ -12,14 +19,36 @@ const ProfileScreen = () => {
     height: '180cm',
     age: '25',
     weight: '75kg',
-    gender: 'Erkek'
+    gender: 'Erkek',
   };
 
   const menuItems = [
     { id: 1, title: 'Randevularım', icon: 'event-note', route: 'Randevular' },
-    { id: 2, title: 'Bilgilerimi Düzenle', icon: 'edit', route: 'PaymentMethods' },
-    { id: 3, title: 'Çıkış Yap', icon: 'logout', route: 'Logout', color: '#FF4B55' }
+    {
+      id: 2,
+      title: 'Bilgilerimi Düzenle',
+      icon: 'edit',
+      route: 'PaymentMethods',
+    },
+    {
+      id: 3,
+      title: 'Çıkış Yap',
+      icon: 'logout',
+      route: 'Logout',
+      color: '#FF4B55',
+    },
   ];
+
+  const getGenderIcon = (gender) => {
+    switch (gender?.toLowerCase()) {
+      case 'erkek':
+        return 'male';
+      case 'kadın':
+        return 'female';
+      default:
+        return 'person';
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,27 +65,33 @@ const ProfileScreen = () => {
 
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <MaterialIcons name="height" size={24} color="#fff" />
+            <MaterialIcons name='height' size={24} color='#fff' />
             <Text style={styles.statLabel}>Boy</Text>
             <Text style={styles.statValue}>{userData.height}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <MaterialIcons name="person" size={24} color="#fff" />
+            <MaterialIcons name='person' size={24} color='#fff' />
             <Text style={styles.statLabel}>Yaş</Text>
             <Text style={styles.statValue}>{userData.age}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <MaterialIcons name="monitor-weight" size={24} color="#fff" />
+            <MaterialIcons name='monitor-weight' size={24} color='#fff' />
             <Text style={styles.statLabel}>Kilo</Text>
             <Text style={styles.statValue}>{userData.weight}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <MaterialIcons name="wc" size={24} color="#fff" />
+            <MaterialIcons
+              name={getGenderIcon(userData.gender)}
+              size={24}
+              color='#fff'
+            />
             <Text style={styles.statLabel}>Cinsiyet</Text>
-            <Text style={styles.statValue}>{userData.gender}</Text>
+            <Text style={styles.statValue}>
+              {userData.gender || 'Belirtilmemiş'}
+            </Text>
           </View>
         </View>
       </View>
@@ -75,10 +110,12 @@ const ProfileScreen = () => {
                 color={item.color || '#20B2AA'}
               />
             </View>
-            <Text style={[styles.menuText, item.color && { color: item.color }]}>
+            <Text
+              style={[styles.menuText, item.color && { color: item.color }]}
+            >
               {item.title}
             </Text>
-            <MaterialIcons name="chevron-right" size={24} color="#CCCCCC" />
+            <MaterialIcons name='chevron-right' size={24} color='#CCCCCC' />
           </TouchableOpacity>
         ))}
       </View>
@@ -178,4 +215,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProfileScreen; 
+export default ProfileScreen;

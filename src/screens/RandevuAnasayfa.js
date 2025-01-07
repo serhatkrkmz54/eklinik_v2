@@ -128,7 +128,7 @@ const RandevuAnasayfa = ({ navigation }) => {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Tüm Doktorlarımız</Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('TopDoctors')}
+              onPress={() => navigation.navigate('TumDoktorlarEkrani')}
               style={styles.seeAllButton}
             >
               <Text style={styles.seeAllText}>Tümünü Gör</Text>
@@ -143,7 +143,7 @@ const RandevuAnasayfa = ({ navigation }) => {
           <View style={styles.allDoctorsContainer}>
             <TouchableOpacity
               style={styles.doctorsCard}
-              onPress={() => navigation.navigate('TopDoctors')}
+              onPress={() => navigation.navigate('TumDoktorlarEkrani')}
             >
               <View style={styles.doctorsCardContent}>
                 <MaterialIcons name='people' size={24} color='#008B8B' />
