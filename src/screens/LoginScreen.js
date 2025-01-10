@@ -1,54 +1,152 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, StatusBar, Platform, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  StatusBar,
+  Platform,
+} from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import BackButton from '../components/BackButton';
 import { FONTS } from '../theme/fonts';
 import BackgroundLogo from '../components/BackgroundLogo';
-import SuccessModal from '../components/SuccessModal';
+import { isValidEmail } from '../utils/validation';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
   const [showPassword, setShowPassword] = useState(false);
-  const [tcKimlik, setTcKimlik] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [loading, setLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const handleTcKimlikChange = (text) => {
-    const numericValue = text.replace(/[^0-9]/g, '');
-    if (numericValue.length <= 11) {
-      setTcKimlik(numericValue);
-    }
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          // Token varsa direkt ana sayfaya yönlendir
+          navigation.replace('MainApp');
+        }
+      } catch (err) {
+        // Hata durumunda token'ı temizle
+        await AsyncStorage.removeItem('userToken');
+      }
+    };
+
+    checkToken();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkAuth = async () => {
+        try {
+          const token = await AsyncStorage.getItem('userToken');
+          if (token) {
+            // Token varsa ana sayfaya yönlendir
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainApp' }],
+            });
+          }
+        } catch (err) {
+          // Hata durumunda token'ı temizle
+          await AsyncStorage.removeItem('userToken');
+          await AsyncStorage.removeItem('tokenTimestamp');
+        }
+      };
+
+      checkAuth();
+    }, [navigation])
+  );
+
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleLogin = () => {
-    if (tcKimlik === '48610685828' && password === '123456') {
+  const getEmailValidationStyle = () => {
+    if (formData.email.length === 0) return styles.inputWrapper;
+    return isValidEmail(formData.email)
+      ? [styles.inputWrapper, styles.validInput]
+      : [styles.inputWrapper, styles.invalidInput];
+  };
+
+  const isFormValid = () => {
+    return (
+      formData.email.trim() !== '' &&
+      isValidEmail(formData.email) &&
+      formData.password.trim() !== ''
+    );
+  };
+
+  const handleLogin = async () => {
+    try {
       setLoading(true);
-      setShowSuccessModal(true);
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        navigation.replace('MainApp');
-      }, 3000);
-    } else {
-      Alert.alert(
-        "Giriş Başarısız",
-        "TC Kimlik numarası veya şifre hatalı. Lütfen bilgilerinizi kontrol ediniz.",
-        [
-          { text: "Tamam", style: "cancel" }
-        ]
+      const response = await axios.post(
+        'http://10.121.242.101:8000/api/login',
+        {
+          email: formData.email,
+          password: formData.password,
+        }
       );
-    }
-  };
 
-  const handleSuccessModalClose = () => {
-    setShowSuccessModal(false);
-    navigation.replace('MainApp');
+      if (response.data?.token) {
+        console.log('Giriş başarılı! Token:', response.data.token);
+
+        // Token'ı kaydet
+        await AsyncStorage.setItem('userToken', response.data.token);
+
+        Toast.show({
+          type: 'success',
+          text1: 'Başarılı',
+          text2: 'Giriş başarılı! Yönlendiriliyorsunuz...',
+          position: 'top',
+          visibilityTime: 2000,
+        });
+
+        setFormData({
+          email: '',
+          password: '',
+        });
+
+        setTimeout(() => {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainApp' }],
+          });
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Giriş hatası:', err.response?.data);
+      let errorMessage = 'Giriş yapılırken bir hata oluştu';
+
+      if (err.response?.data?.message === 'Invalid credentials') {
+        errorMessage = 'E-posta veya şifre hatalı';
+      }
+
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: errorMessage,
+        position: 'top',
+        visibilityTime: 3000,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
       <View style={styles.header}>
         <BackButton />
         <Text style={styles.headerTitle}>Giriş Yap</Text>
@@ -57,46 +155,63 @@ const LoginScreen = () => {
       <View style={styles.mainContent}>
         <BackgroundLogo />
         <View style={styles.inputContainer}>
-          <View style={styles.inputWrapper}>
-            <MaterialIcons name="person" size={18} color="#666" style={styles.inputIcon} />
+          <View style={getEmailValidationStyle()}>
+            <MaterialIcons
+              name='email'
+              size={20}
+              color={
+                formData.email.length > 0
+                  ? isValidEmail(formData.email)
+                    ? '#4CAF50'
+                    : '#FF5252'
+                  : '#666'
+              }
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="TC Kimlik numaranızı giriniz"
-              placeholderTextColor="#666"
-              value={tcKimlik}
-              onChangeText={handleTcKimlikChange}
-              keyboardType="numeric"
-              maxLength={11}
+              placeholder='E-posta Adresiniz'
+              placeholderTextColor='#666'
+              keyboardType='email-address'
+              autoCapitalize='none'
+              value={formData.email}
+              onChangeText={(text) => handleInputChange('email', text)}
             />
-            {tcKimlik.length > 0 && (
-              tcKimlik.length === 11 ? (
-                <MaterialIcons name="check-circle" size={20} color="#4CAF50" />
-              ) : (
-                <Text style={styles.characterCount}>{tcKimlik.length}/11</Text>
-              )
+            {formData.email.length > 0 && (
+              <MaterialIcons
+                name={isValidEmail(formData.email) ? 'check-circle' : 'error'}
+                size={20}
+                color={isValidEmail(formData.email) ? '#4CAF50' : '#FF5252'}
+              />
             )}
           </View>
+
           <View style={styles.inputWrapper}>
-            <MaterialIcons name="lock" size={18} color="#666" style={styles.inputIcon} />
+            <MaterialIcons
+              name='lock'
+              size={20}
+              color='#666'
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
-              placeholder="Şifrenizi giriniz"
+              placeholder='Şifreniz'
               secureTextEntry={!showPassword}
-              placeholderTextColor="#666"
-              value={password}
-              onChangeText={setPassword}
+              placeholderTextColor='#666'
+              value={formData.password}
+              onChangeText={(text) => handleInputChange('password', text)}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons 
-                name={showPassword ? "eye-off" : "eye"} 
-                size={20} 
-                color="#666" 
+              <Ionicons
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={20}
+                color='#666'
                 style={styles.eyeIcon}
               />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.forgotPassword}
             onPress={() => navigation.navigate('ForgotPassword')}
           >
@@ -104,13 +219,13 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.loginButton,
-            loading && styles.loginButtonDisabled
-          ]} 
+            (!isFormValid() || loading) && styles.loginButtonDisabled,
+          ]}
           onPress={handleLogin}
-          disabled={loading || tcKimlik.length !== 11 || !password}
+          disabled={!isFormValid() || loading}
         >
           <Text style={styles.loginButtonText}>
             {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
@@ -124,11 +239,7 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-
-      <SuccessModal 
-        visible={showSuccessModal}
-        onClose={handleSuccessModalClose}
-      />
+      <Toast />
     </SafeAreaView>
   );
 };
@@ -227,6 +338,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  validInput: {
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  invalidInput: {
+    borderWidth: 1,
+    borderColor: '#FF5252',
+  },
 });
 
-export default LoginScreen; 
+export default LoginScreen;

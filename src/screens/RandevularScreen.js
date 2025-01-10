@@ -46,7 +46,7 @@ const randevular = [
   },
 ];
 
-const RandevuKarti = ({ randevu, onDelete, onReschedule }) => {
+const RandevuKarti = ({ randevu, onDelete }) => {
   const swipeableRef = useRef(null);
 
   useEffect(() => {
@@ -62,15 +62,6 @@ const RandevuKarti = ({ randevu, onDelete, onReschedule }) => {
       <View style={styles.rightAction}>
         <MaterialIcons name='delete' size={24} color='#fff' />
         <Text style={styles.actionText}>Sil</Text>
-      </View>
-    );
-  };
-
-  const renderLeftActions = (progress, dragX) => {
-    return (
-      <View style={styles.leftAction}>
-        <MaterialIcons name='event' size={24} color='#fff' />
-        <Text style={styles.actionText}>Yeniden Planla</Text>
       </View>
     );
   };
@@ -97,19 +88,11 @@ const RandevuKarti = ({ randevu, onDelete, onReschedule }) => {
     );
   };
 
-  const handleLeftOpen = () => {
-    onReschedule(randevu);
-    swipeableRef.current.close();
-  };
-
   return (
     <Swipeable
       ref={swipeableRef}
       renderRightActions={renderRightActions}
-      renderLeftActions={renderLeftActions}
       onSwipeableRightOpen={handleRightOpen}
-      onSwipeableLeftOpen={handleLeftOpen}
-      overshootLeft={false}
       overshootRight={false}
     >
       <View style={styles.card}>
@@ -158,10 +141,6 @@ const RandevularScreen = ({ navigation }) => {
     setAppointments(appointments.filter((randevu) => randevu.id !== id));
   };
 
-  const handleReschedule = (randevu) => {
-    navigation.navigate('Randevu', { rescheduleData: randevu });
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle='dark-content' backgroundColor='#fff' />
@@ -175,11 +154,7 @@ const RandevularScreen = ({ navigation }) => {
         data={appointments}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <RandevuKarti
-            randevu={item}
-            onDelete={handleDelete}
-            onReschedule={handleReschedule}
-          />
+          <RandevuKarti randevu={item} onDelete={handleDelete} />
         )}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}

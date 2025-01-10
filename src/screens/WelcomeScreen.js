@@ -1,10 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FONTS } from '../theme/fonts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WelcomeScreen = () => {
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        if (token) {
+          // Token varsa direkt ana sayfaya yönlendir
+          navigation.replace('MainApp');
+        }
+      } catch (err) {
+        // Hata durumunda token'ı temizle
+        await AsyncStorage.removeItem('userToken');
+      }
+    };
+
+    checkToken();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -12,28 +30,31 @@ const WelcomeScreen = () => {
         <Image
           source={require('../../assets/medics-logo.png')}
           style={styles.logo}
-          resizeMode="contain"
+          resizeMode='contain'
         />
         <Text style={styles.title}>E-KLİNİK RANDEVU SİSTEMİ</Text>
-        <Text style={styles.subtitle}>Randevu almak için lütfen giriş yapınız. Kaydınız yoksa lütfen kayıt olunuz. Yada hastane ile iletişime geçiniz.</Text>
+        <Text style={styles.subtitle}>
+          Randevu almak için lütfen giriş yapınız. Kaydınız yoksa lütfen kayıt
+          olunuz. Yada hastane ile iletişime geçiniz.
+        </Text>
       </View>
-      
+
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.ambulanceButton}
           onPress={() => navigation.navigate('AmbulansCagir')}
         >
           <Text style={styles.ambulanceButtonText}>Ambulans Çağır</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.loginButton}
           onPress={() => navigation.navigate('Login')}
         >
           <Text style={styles.loginButtonText}>Giriş Yap</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.signUpButton}
           onPress={() => navigation.navigate('SignUp')}
         >
@@ -117,4 +138,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default WelcomeScreen; 
+export default WelcomeScreen;

@@ -8,6 +8,7 @@ import { FONTS } from './src/theme/fonts';
 import { StatusBar, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Toast from 'react-native-toast-message';
 
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -183,6 +184,7 @@ export default function App() {
           </Stack.Navigator>
         </NavigationContainer>
       </View>
+      <Toast />
     </GestureHandlerRootView>
   );
 }

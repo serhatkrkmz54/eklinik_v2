@@ -10,9 +10,41 @@ import {
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { FONTS } from '../theme/fonts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+
+  const handleLogout = async () => {
+    try {
+      // Token'ları temizle
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('tokenTimestamp');
+
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: 'Çıkış yapıldı',
+        position: 'top',
+        visibilityTime: 2000,
+      });
+
+      // WelcomeScreen'e yönlendir ve navigation stack'i temizle
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Welcome' }],
+      });
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: 'Çıkış yapılırken bir hata oluştu',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+    }
+  };
 
   const userData = {
     name: 'Serhat KORKMAZ',
@@ -36,6 +68,7 @@ const ProfileScreen = () => {
       icon: 'logout',
       route: 'Logout',
       color: '#FF4B55',
+      onPress: handleLogout,
     },
   ];
 
@@ -101,7 +134,7 @@ const ProfileScreen = () => {
           <TouchableOpacity
             key={item.id}
             style={styles.menuItem}
-            onPress={() => navigation.navigate(item.route)}
+            onPress={item.onPress || (() => navigation.navigate(item.route))}
           >
             <View style={styles.menuIconContainer}>
               <MaterialIcons
@@ -119,6 +152,7 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         ))}
       </View>
+      <Toast />
     </SafeAreaView>
   );
 };
