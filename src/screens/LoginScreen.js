@@ -33,11 +33,9 @@ const LoginScreen = () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (token) {
-          // Token varsa direkt ana sayfaya yönlendir
           navigation.replace('MainApp');
         }
       } catch (err) {
-        // Hata durumunda token'ı temizle
         await AsyncStorage.removeItem('userToken');
       }
     };
@@ -51,14 +49,12 @@ const LoginScreen = () => {
         try {
           const token = await AsyncStorage.getItem('userToken');
           if (token) {
-            // Token varsa ana sayfaya yönlendir
             navigation.reset({
               index: 0,
               routes: [{ name: 'MainApp' }],
             });
           }
         } catch (err) {
-          // Hata durumunda token'ı temizle
           await AsyncStorage.removeItem('userToken');
           await AsyncStorage.removeItem('tokenTimestamp');
         }
@@ -90,18 +86,13 @@ const LoginScreen = () => {
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const response = await axios.post(
-        'http://10.121.242.101:8000/api/login',
-        {
-          email: formData.email,
-          password: formData.password,
-        }
-      );
+      const response = await axios.post('http://132.226.194.153/api/login', {
+        email: formData.email,
+        password: formData.password,
+      });
 
       if (response.data?.token) {
         console.log('Giriş başarılı! Token:', response.data.token);
-
-        // Token'ı kaydet
         await AsyncStorage.setItem('userToken', response.data.token);
 
         Toast.show({
@@ -126,19 +117,51 @@ const LoginScreen = () => {
       }
     } catch (err) {
       console.error('Giriş hatası:', err.response?.data);
-      let errorMessage = 'Giriş yapılırken bir hata oluştu';
 
-      if (err.response?.data?.message === 'Invalid credentials') {
-        errorMessage = 'E-posta veya şifre hatalı';
+      if (err.response?.data?.errors) {
+        const errors = err.response.data.errors;
+        if (errors.email) {
+          setTimeout(() => {
+            Toast.show({
+              type: 'error',
+              text1: 'E-posta Hatası',
+              text2: errors.email[0],
+              position: 'top',
+              visibilityTime: 3000,
+            });
+          }, 0);
+        }
+        if (errors.password) {
+          setTimeout(
+            () => {
+              Toast.show({
+                type: 'error',
+                text1: 'Şifre Hatası',
+                text2: errors.password[0],
+                position: 'top',
+                visibilityTime: 3000,
+              });
+            },
+            errors.email ? 3100 : 0
+          );
+        }
+      } else if (err.response?.data?.message) {
+        Toast.show({
+          type: 'error',
+          text1: 'Giriş Hatası',
+          text2: 'E-posta veya şifre hatalı',
+          position: 'top',
+          visibilityTime: 3000,
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Hata',
+          text2: 'Giriş yapılırken bir hata oluştu',
+          position: 'top',
+          visibilityTime: 3000,
+        });
       }
-
-      Toast.show({
-        type: 'error',
-        text1: 'Hata',
-        text2: errorMessage,
-        position: 'top',
-        visibilityTime: 3000,
-      });
     } finally {
       setLoading(false);
     }

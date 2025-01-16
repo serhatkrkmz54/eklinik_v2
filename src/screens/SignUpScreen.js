@@ -48,11 +48,9 @@ const SignUpScreen = () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
         if (token) {
-          // Token varsa direkt ana sayfaya yönlendir
           navigation.replace('MainApp');
         }
       } catch (err) {
-        // Hata durumunda token'ı temizle
         await AsyncStorage.removeItem('userToken');
       }
     };
@@ -131,25 +129,20 @@ const SignUpScreen = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await axios.post(
-        'http://10.121.242.101:8000/api/register',
-        {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          password_confirmation: formData.password,
-          tckn: formData.tcKimlik,
-          phoneNumber: formData.phone.replace(/[^0-9]/g, ''),
-          gender: formData.gender,
-          birth_date: formatDate(formData.birth_date),
-        }
-      );
+      const response = await axios.post('http://132.226.194.153/api/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.password,
+        tckn: formData.tcKimlik,
+        phoneNumber: formData.phone.replace(/[^0-9]/g, ''),
+        gender: formData.gender,
+        birth_date: formatDate(formData.birth_date),
+      });
 
       if (response.data) {
         console.log('Kayıt başarılı! Token:', response.data.token);
         await AsyncStorage.setItem('userToken', response.data.token);
-
-        // Form verilerini sıfırla
         setFormData({
           name: '',
           tcKimlik: '',
@@ -176,7 +169,7 @@ const SignUpScreen = () => {
         }, 3000);
       }
     } catch (err) {
-      console.error('Kayıt hatası:', err.response?.data);
+      console.error('Kayıt hatası:', err.reponse?.dasta);
       let errorMessages = [];
 
       if (err.response?.data?.errors) {

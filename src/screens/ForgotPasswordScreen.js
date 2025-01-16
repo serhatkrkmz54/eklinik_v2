@@ -1,60 +1,89 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, StatusBar, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  StatusBar,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import BackButton from '../components/BackButton';
-import { isValidEmail } from '../utils/validation';
 import { FONTS } from '../theme/fonts';
+import { isValidEmail } from '../utils/validation';
+import BackgroundLogo from '../components/BackgroundLogo';
+import axios from 'axios';
+import Toast from 'react-native-toast-message';
 
 const ForgotPasswordScreen = () => {
   const navigation = useNavigation();
-  const [method, setMethod] = useState('email');
-  const [value, setValue] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const formatPhoneNumber = (text) => {
-    const numbers = text.replace(/[^\d]/g, '');
-    if (numbers.length <= 3) {
-      return `(${numbers}`;
-    } else if (numbers.length <= 6) {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
-    } else if (numbers.length <= 10) {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)} - ${numbers.slice(6)}`;
+  const handleSendEmail = async () => {
+    if (!isValidEmail(email)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: 'Lütfen geçerli bir e-posta adresi girin',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+      return;
     }
-    return numbers;
-  };
 
-  const handleInputChange = (text) => {
-    if (method === 'phone') {
-      const numericValue = text.replace(/[^\d]/g, '');
-      if (numericValue.length <= 10) {
-        setValue(formatPhoneNumber(numericValue));
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        'http://132.226.194.153/api/forgot-password',
+        {
+          email: email,
+        }
+      );
+
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+
+      setTimeout(() => {
+        navigation.navigate('Login');
+      }, 3000);
+    } catch (error) {
+      console.error('Şifre sıfırlama hatası:', error.response?.data);
+      let errorMessage = 'Şifre sıfırlama işlemi sırasında bir hata oluştu';
+
+      if (error.response?.data?.errors?.email) {
+        errorMessage = error.response.data.errors.email[0];
       }
-    } else {
-      setValue(text);
+
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: errorMessage,
+        position: 'top',
+        visibilityTime: 3000,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getInputValidation = () => {
-    if (value.length === 0) return styles.inputWrapper;
-    if (method === 'email') {
-      return isValidEmail(value) 
-        ? [styles.inputWrapper, styles.validInput]
-        : [styles.inputWrapper, styles.invalidInput];
-    }
-
-    return value.replace(/[^\d]/g, '').length === 10
+  const getEmailValidationStyle = () => {
+    if (email.length === 0) return styles.inputWrapper;
+    return isValidEmail(email)
       ? [styles.inputWrapper, styles.validInput]
       : [styles.inputWrapper, styles.invalidInput];
   };
 
-  const isValidInput = () => {
-    if (method === 'email') return isValidEmail(value);
-    return value.replace(/[^\d]/g, '').length === 10;
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
       <View style={styles.header}>
         <BackButton />
         <Text style={styles.headerTitle}>Şifremi Unuttum</Text>
@@ -62,79 +91,59 @@ const ForgotPasswordScreen = () => {
       </View>
 
       <View style={styles.mainContent}>
+        <BackgroundLogo />
         <Text style={styles.description}>
-          Şifre değiştirmek için bilgilerinizi doğru giriniz. Size doğrulama kodu göndereceğiz.
+          Şifrenizi sıfırlamak için e-posta adresinizi girin. Size şifre
+          sıfırlama bağlantısı göndereceğiz.
         </Text>
 
-        <View style={styles.secenekSecimi}>
-          <TouchableOpacity 
-            style={[
-              styles.methodButton,
-              method === 'email' && styles.methodButtonActive
-            ]}
-            onPress={() => {
-              setMethod('email');
-              setValue('');
-            }}
-          >
-            <Text style={[
-              styles.methodButtonText,
-              method === 'email' && styles.methodButtonTextActive
-            ]}>Email</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[
-              styles.methodButton,
-              method === 'phone' && styles.methodButtonActive
-            ]}
-            onPress={() => {
-              setMethod('phone');
-              setValue('');
-            }}
-          >
-            <Text style={[
-              styles.methodButtonText,
-              method === 'phone' && styles.methodButtonTextActive
-            ]}>Telefon</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={getInputValidation()}>
-          <MaterialIcons 
-            name={method === 'email' ? 'email' : 'phone'} 
-            size={20} 
-            color={value.length > 0 ? (isValidInput() ? '#50A9F9' : '#FF5252') : '#666'} 
-            style={styles.inputIcon} 
-          />
-          <TextInput
-            style={styles.input}
-            placeholder={method === 'email' ? 'E-posta adresiniz' : 'Telefon numaranız'}
-            placeholderTextColor="#666"
-            keyboardType={method === 'email' ? 'email-address' : 'numeric'}
-            autoCapitalize="none"
-            value={value}
-            onChangeText={handleInputChange}
-          />
-          {value.length > 0 && (
-            <MaterialIcons 
-              name={isValidInput() ? "check-circle" : "error"} 
-              size={20} 
-              color={isValidInput() ? '#4CAF50' : '#FF5252'} 
+        <View style={styles.inputContainer}>
+          <View style={getEmailValidationStyle()}>
+            <MaterialIcons
+              name='email'
+              size={20}
+              color={
+                email.length > 0
+                  ? isValidEmail(email)
+                    ? '#4CAF50'
+                    : '#FF5252'
+                  : '#666'
+              }
+              style={styles.inputIcon}
             />
-          )}
+            <TextInput
+              style={styles.input}
+              placeholder='E-posta Adresiniz'
+              placeholderTextColor='#666'
+              keyboardType='email-address'
+              autoCapitalize='none'
+              value={email}
+              onChangeText={setEmail}
+            />
+            {email.length > 0 && (
+              <MaterialIcons
+                name={isValidEmail(email) ? 'check-circle' : 'error'}
+                size={20}
+                color={isValidEmail(email) ? '#4CAF50' : '#FF5252'}
+              />
+            )}
+          </View>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.resetButton,
-            !isValidInput() && styles.resetButtonDisabled
+            styles.sendButton,
+            (!isValidEmail(email) || loading) && styles.sendButtonDisabled,
           ]}
-          disabled={!isValidInput()}
+          onPress={handleSendEmail}
+          disabled={!isValidEmail(email) || loading}
         >
-          <Text style={styles.resetButtonText}>Şifremi Sıfırla</Text>
+          <Text style={styles.sendButtonText}>
+            {loading ? 'Gönderiliyor...' : 'Sıfırlama Bağlantısı Gönder'}
+          </Text>
         </TouchableOpacity>
       </View>
+      <Toast />
     </SafeAreaView>
   );
 };
@@ -143,19 +152,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginBottom: 30,
+    paddingTop: 20,
+    marginBottom: 40,
   },
   headerTitle: {
-    fontFamily: FONTS.inter.semiBold,
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: FONTS.inter.semiBold,
     color: '#000',
   },
   placeholder: {
@@ -166,51 +174,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   description: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 24,
+    fontFamily: FONTS.inter.regular,
   },
-  secenekSecimi: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  methodButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-  methodButtonActive: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  methodButtonText: {
-    color: '#666',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  methodButtonTextActive: {
-    color: '#50A9F9',
-    fontWeight: '600',
+  inputContainer: {
+    marginBottom: 30,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    marginBottom: 20,
     paddingHorizontal: 15,
     height: 55,
   },
@@ -221,6 +199,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#000',
     fontSize: 14,
+    fontFamily: FONTS.inter.regular,
   },
   validInput: {
     borderWidth: 1,
@@ -230,23 +209,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FF5252',
   },
-  resetButton: {
-    backgroundColor: '#50A9F9',
+  sendButton: {
+    backgroundColor: '#008B8B',
     padding: 16,
     borderRadius: 12,
-    height: 55,
-    justifyContent: 'center',
+    marginBottom: 20,
   },
-  resetButtonDisabled: {
+  sendButtonDisabled: {
     backgroundColor: '#ccc',
   },
-  resetButtonText: {
+  sendButtonText: {
     color: '#fff',
     textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: FONTS.poppins.semiBold,
+    fontSize: 16,
+    fontFamily: FONTS.inter.semiBold,
   },
 });
 
-export default ForgotPasswordScreen; 
+export default ForgotPasswordScreen;

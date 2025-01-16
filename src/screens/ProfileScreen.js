@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,22 +6,118 @@ import {
   Image,
   TouchableOpacity,
   SafeAreaView,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { FONTS } from '../theme/fonts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
+import axios from 'axios';
+
+const LoadingDots = () => {
+  const animations = [
+    useRef(new Animated.Value(0.3)).current,
+    useRef(new Animated.Value(0.3)).current,
+    useRef(new Animated.Value(0.3)).current,
+  ];
+
+  useEffect(() => {
+    const animate = () => {
+      const sequence = animations.map((anim, index) => {
+        return Animated.sequence([
+          Animated.delay(index * 200),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0.3,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]);
+      });
+
+      Animated.loop(Animated.parallel(sequence)).start();
+    };
+
+    animate();
+  }, []);
+
+  return (
+    <View style={styles.loadingDotsContainer}>
+      {animations.map((anim, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.loadingDot,
+            {
+              backgroundColor: '#008B8B',
+              opacity: anim,
+              transform: [
+                {
+                  scale: anim.interpolate({
+                    inputRange: [0.3, 1],
+                    outputRange: [1, 1.5],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+};
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Welcome' }],
+        });
+        return;
+      }
+
+      const response = await axios.get('http://132.226.194.153/api/user/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // console.log('Data:', response.data);
+      setUserData(response.data.data);
+    } catch (error) {
+      console.error('Kullanıcı bilgileri alınamadı:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: 'Kullanıcı bilgileri alınamadı',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
-      // Token'ları temizle
       await AsyncStorage.removeItem('userToken');
-      await AsyncStorage.removeItem('tokenTimestamp');
-
       Toast.show({
         type: 'success',
         text1: 'Başarılı',
@@ -29,8 +125,6 @@ const ProfileScreen = () => {
         position: 'top',
         visibilityTime: 2000,
       });
-
-      // WelcomeScreen'e yönlendir ve navigation stack'i temizle
       navigation.reset({
         index: 0,
         routes: [{ name: 'Welcome' }],
@@ -44,14 +138,6 @@ const ProfileScreen = () => {
         visibilityTime: 3000,
       });
     }
-  };
-
-  const userData = {
-    name: 'Serhat KORKMAZ',
-    height: '180cm',
-    age: '25',
-    weight: '75kg',
-    gender: 'Erkek',
   };
 
   const menuItems = [
@@ -74,14 +160,61 @@ const ProfileScreen = () => {
 
   const getGenderIcon = (gender) => {
     switch (gender?.toLowerCase()) {
-      case 'erkek':
+      case 'male':
         return 'male';
-      case 'kadın':
+      case 'female':
         return 'female';
       default:
         return 'person';
     }
   };
+
+  const getGenderText = (gender) => {
+    switch (gender?.toLowerCase()) {
+      case 'male':
+        return 'Erkek';
+      case 'female':
+        return 'Kadın';
+      default:
+        return 'Belirtilmemiş';
+    }
+  };
+
+  const getRoleStyle = (role) => {
+    return {
+      fontSize: 14,
+      fontFamily: FONTS.inter.medium,
+      color: role === 'doctor' ? '#008B8B' : '#FF4B55',
+      backgroundColor: role === 'doctor' ? '#E6F3F3' : '#FFE6E8',
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 20,
+      marginTop: 5,
+    };
+  };
+
+  const getRoleText = (role) => {
+    return role === 'doctor' ? 'Doktor' : 'Hasta';
+  };
+
+  if (loading || !userData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size='large' color='#008B8B' />
+            <Image
+              source={require('../../assets/medics-logo.png')}
+              style={styles.loadingLogo}
+              resizeMode='contain'
+            />
+            <Text style={styles.loadingText}>Bilgileriniz Yükleniyor...</Text>
+            <LoadingDots />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -89,30 +222,37 @@ const ProfileScreen = () => {
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{ uri: 'https://i.pravatar.cc/300' }}
+              source={
+                userData.profile_photo
+                  ? { uri: userData.profile_photo }
+                  : require('../../assets/default-user.jpg')
+              }
               style={styles.profileImage}
             />
           </View>
           <Text style={styles.userName}>{userData.name}</Text>
+          <Text style={getRoleStyle(userData.role)}>
+            {getRoleText(userData.role)}
+          </Text>
         </View>
 
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
-            <MaterialIcons name='height' size={24} color='#fff' />
-            <Text style={styles.statLabel}>Boy</Text>
-            <Text style={styles.statValue}>{userData.height}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
             <MaterialIcons name='person' size={24} color='#fff' />
-            <Text style={styles.statLabel}>Yaş</Text>
-            <Text style={styles.statValue}>{userData.age}</Text>
+            <Text style={styles.statLabel}>TCKN</Text>
+            <Text style={styles.statValue}>{userData.tckn}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <MaterialIcons name='monitor-weight' size={24} color='#fff' />
-            <Text style={styles.statLabel}>Kilo</Text>
-            <Text style={styles.statValue}>{userData.weight}</Text>
+            <MaterialIcons name='cake' size={24} color='#fff' />
+            <Text style={styles.statLabel}>Doğum Tarihi</Text>
+            <Text style={styles.statValue}>{userData.birth_date}</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <MaterialIcons name='phone' size={24} color='#fff' />
+            <Text style={styles.statLabel}>Telefon</Text>
+            <Text style={styles.statValue}>{userData.phone}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
@@ -123,7 +263,7 @@ const ProfileScreen = () => {
             />
             <Text style={styles.statLabel}>Cinsiyet</Text>
             <Text style={styles.statValue}>
-              {userData.gender || 'Belirtilmemiş'}
+              {getGenderText(userData.gender)}
             </Text>
           </View>
         </View>
@@ -161,6 +301,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#20B2AA',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingLogo: {
+    width: 100,
+    height: 100,
+    marginVertical: 20,
+    tintColor: '#008B8B',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#008B8B',
+    fontFamily: FONTS.inter.medium,
+    marginTop: 10,
+  },
+  loadingDotsContainer: {
+    flexDirection: 'row',
+    marginTop: 20,
+  },
+  loadingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 5,
+    opacity: 0.6,
   },
   header: {
     backgroundColor: '#20B2AA',
