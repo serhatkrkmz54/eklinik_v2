@@ -1,15 +1,17 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, StatusBar, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { FONTS } from '../theme/fonts';
 import BackgroundLogo from '../components/BackgroundLogo';
 import Toast from 'react-native-toast-message';
-import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
 
-// GÜNCELLENDİ: Yeni oluşturduğumuz servisi import ediyoruz
 import { getAllClinics } from '../services/clinicService';
 
+// GÜNCELLENDİ: Kütüphane değiştirildi
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+
+// Klinik isimlerini lokal resimlere eşleştiren harita
 const clinicImageMap = {
   'algoloji': require('../../assets/poliklinikler/algoloji.png'),
   'beyin cerrahı': require('../../assets/poliklinikler/beyincerrahi.png'),
@@ -28,11 +30,9 @@ const clinicImageMap = {
   'ortopedi': require('../../assets/poliklinikler/ortopedivetravmatoloji.png'),
   'kulak burun boğaz': require('../../assets/poliklinikler/kulakburunbogaz.png'),
   'üroloji': require('../../assets/poliklinikler/uroloji.png'),
-  // Eşleşme bulunamazsa kullanılacak varsayılan resim
   default: require('../../assets/medics-logo.png')
 };
 
-// GÜNCELLENDİ: Klinik ismine göre doğru resmi bulan yardımcı fonksiyon
 const getClinicImage = (name) => {
   if (!name) return clinicImageMap.default;
   const normalizedName = name.toLowerCase().trim();
@@ -53,22 +53,26 @@ const PolikliniklerScreen = () => {
   const [clinics, setClinics] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchClinics = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await getAllClinics();
-      setClinics(data);
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Hata', text2: error.message });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useFocusEffect(
+      useCallback(() => {
+        const fetchClinics = async () => {
+          try {
+            setLoading(true);
+            const data = await getAllClinics();
+            setClinics(data);
+          } catch (error) {
+            Toast.show({ type: 'error', text1: 'Hata', text2: error.message });
+          } finally {
+            setLoading(false);
+          }
+        };
 
-  useFocusEffect(fetchClinics);
+        fetchClinics();
+      }, [])
+  );
 
   useEffect(() => {
-    const WEBSOCKET_URL = '[http://192.168.1.34:8080/ws](http://192.168.1.34:8080/ws)'; // DİKKAT: Kendi IP adresinizi yazın.
+    const WEBSOCKET_URL = 'http://192.168.1.33:8080/ws';
 
     const client = new Client({
       webSocketFactory: () => new SockJS(WEBSOCKET_URL),
@@ -80,7 +84,7 @@ const PolikliniklerScreen = () => {
         client.subscribe('/topic/clinics', (message) => {
           try {
             const newClinic = JSON.parse(message.body);
-            console.log('Yeni klinik bilgisi alındı:', newClinic);
+            // console.log('Yeni klinik bilgisi alındı:', newClinic);
             setClinics(prevClinics => {
               if (prevClinics.some(c => c.id === newClinic.id)) {
                 return prevClinics;
@@ -112,7 +116,7 @@ const PolikliniklerScreen = () => {
       <View style={styles.container}>
         <BackgroundLogo />
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Poliklinikler - Hızlı Randevu</Text>
+          <Text style={styles.headerTitle}>Poliklinikler</Text>
         </View>
 
         {loading ? (
@@ -120,13 +124,12 @@ const PolikliniklerScreen = () => {
         ) : (
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
               <View style={styles.poliklinikGrid}>
-                {/* GÜNCELLENDİ: API'den gelen dinamik veri ile render ediliyor */}
                 {clinics.map((item) => (
                     <PoliklinikItem
                         key={item.id}
                         iconSource={getClinicImage(item.name)}
                         title={item.name}
-                        onPress={() => navigation.navigate('Randevu')} // TODO: Burayı ilgili kliniğin doktorlarını listeleyecek şekilde güncelleyebilirsiniz.
+                        onPress={() => navigation.navigate('Randevu')}
                     />
                 ))}
               </View>
@@ -160,7 +163,7 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   poliklinikGrid: {
     flexDirection: 'row',

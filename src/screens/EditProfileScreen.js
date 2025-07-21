@@ -12,7 +12,6 @@ import { updateMyProfile } from '../services/userService';
 import { FONTS } from '../theme/fonts';
 import BackButton from '../components/BackButton';
 
-// Tarihi YYYY-MM-DD formatına çeviren yardımcı fonksiyon
 const formatDate = (date) => {
     if (!date) return '';
     const d = new Date(date);
@@ -22,7 +21,6 @@ const formatDate = (date) => {
     return `${year}-${month}-${day}`;
 };
 
-// İkonlu ve şık TextInput bileşeni
 const IconTextInput = ({ icon, ...props }) => (
     <View style={styles.inputContainer}>
         <MaterialIcons name={icon} size={22} color="#888" style={styles.inputIcon} />
@@ -30,7 +28,6 @@ const IconTextInput = ({ icon, ...props }) => (
     </View>
 );
 
-// Daha şık Boolean seçim kutusu bileşeni
 const BooleanSelector = ({ label, value, onValueChange }) => (
     <View style={styles.booleanContainer}>
         <Text style={styles.booleanLabel}>{label}</Text>
@@ -67,8 +64,9 @@ const EditProfileScreen = () => {
         weight: userData.patientProfile?.weight?.toString() || '',
         height: userData.patientProfile?.height?.toString() || '',
         address: userData.patientProfile?.address || '',
-        hasChronicIllness: userData.patientProfile?.hasChronicIllness || false,
-        isMedicationDependent: userData.patientProfile?.isMedicationDependent || false,
+        // DÜZELTME: || false kaldırıldı. Artık null ise null olarak başlayacak.
+        hasChronicIllness: userData.patientProfile?.hasChronicIllness,
+        isMedicationDependent: userData.patientProfile?.isMedicationDependent,
         birthPlaceCity: userData.patientProfile?.birthPlaceCity || '',
         birthPlaceDistrict: userData.patientProfile?.birthPlaceDistrict || '',
         country: userData.patientProfile?.country || '',
@@ -153,7 +151,6 @@ const EditProfileScreen = () => {
                         <IconTextInput icon="location-city" placeholder="Doğum Yeri (Şehir)" value={formData.birthPlaceCity} onChangeText={text => handleInputChange('birthPlaceCity', text)} />
                         <IconTextInput icon="business" placeholder="Doğum Yeri (İlçe)" value={formData.birthPlaceDistrict} onChangeText={text => handleInputChange('birthPlaceDistrict', text)} />
 
-                        {/* DÜZELTME: Adres alanı için özel hizalama yapıldı */}
                         <View style={[styles.inputContainer, { height: 120, alignItems: 'flex-start' }]}>
                             <MaterialIcons name="location-pin" size={22} color="#888" style={[styles.inputIcon, { paddingTop: 15 }]} />
                             <TextInput
@@ -187,7 +184,7 @@ const styles = StyleSheet.create({
     scrollContainer: { padding: 10, paddingBottom: 40 },
     card: { backgroundColor: '#fff', borderRadius: 12, padding: 20, marginBottom: 15, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
     sectionTitle: { fontSize: 18, fontFamily: FONTS.inter.bold, color: '#333', marginBottom: 20 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 12, marginBottom: 15, height: 55 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 12, marginBottom: 15, minHeight: 55 },
     inputIcon: { marginHorizontal: 15 },
     input: { flex: 1, paddingRight: 15, fontSize: 16, color: '#333' },
     dateText: { fontSize: 16, color: '#333' },
