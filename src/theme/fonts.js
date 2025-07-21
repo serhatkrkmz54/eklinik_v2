@@ -1,5 +1,4 @@
 export const FONTS = {
-  // Poppins font ailesi
   poppins: {
     thin: 'Poppins-Thin',
     thinItalic: 'Poppins-ThinItalic',
@@ -21,7 +20,6 @@ export const FONTS = {
     blackItalic: 'Poppins-BlackItalic',
   },
   
-  // Inter font ailesi
   inter: {
     thin: 'Inter_18pt-Thin',
     thinItalic: 'Inter_18pt-ThinItalic',

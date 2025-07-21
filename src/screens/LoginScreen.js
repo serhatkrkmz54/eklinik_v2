@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,262 +8,207 @@ import {
   SafeAreaView,
   StatusBar,
   Platform,
+  ActivityIndicator, Modal,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import BackButton from '../components/BackButton';
 import { FONTS } from '../theme/fonts';
 import BackgroundLogo from '../components/BackgroundLogo';
-import { isValidEmail } from '../utils/validation';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
+
+import { loginUser } from '../services/authService';
+import { AuthContext } from '../context/AuthContext';
+
+const isValidTCKN = (tckn) => {
+  if (typeof tckn !== 'string') {
+    return false;
+  }
+  return /^[0-9]{11}$/.test(tckn);
+};
 
 const LoginScreen = () => {
   const navigation = useNavigation();
+  const { login } = useContext(AuthContext);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
+    nationalId: '',
     password: '',
   });
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const checkToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem('userToken');
-        if (token) {
-          navigation.replace('MainApp');
-        }
-      } catch (err) {
-        await AsyncStorage.removeItem('userToken');
-      }
-    };
-
-    checkToken();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const checkAuth = async () => {
-        try {
-          const token = await AsyncStorage.getItem('userToken');
-          if (token) {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'MainApp' }],
-            });
-          }
-        } catch (err) {
-          await AsyncStorage.removeItem('userToken');
-          await AsyncStorage.removeItem('tokenTimestamp');
-        }
-      };
-
-      checkAuth();
-    }, [navigation])
-  );
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const getEmailValidationStyle = () => {
-    if (formData.email.length === 0) return styles.inputWrapper;
-    return isValidEmail(formData.email)
-      ? [styles.inputWrapper, styles.validInput]
-      : [styles.inputWrapper, styles.invalidInput];
+  const getTCKNValidationStyle = () => {
+    if (formData.nationalId.length === 0) return styles.inputWrapper;
+    return isValidTCKN(formData.nationalId)
+        ? [styles.inputWrapper, styles.validInput]
+        : [styles.inputWrapper, styles.invalidInput];
   };
 
   const isFormValid = () => {
     return (
-      formData.email.trim() !== '' &&
-      isValidEmail(formData.email) &&
-      formData.password.trim() !== ''
+        isValidTCKN(formData.nationalId) &&
+        formData.password.trim() !== ''
     );
   };
 
   const handleLogin = async () => {
+    if (!isFormValid() || loading) return;
+
+    setLoading(true);
+    let isLoginSuccessful = false;
     try {
-      setLoading(true);
-      const response = await axios.post('http://132.226.194.153/api/login', {
-        email: formData.email,
-        password: formData.password,
-      });
+      const response = await loginUser(formData.nationalId, formData.password);
 
-      if (response.data?.token) {
-        console.log('Giriş başarılı! Token:', response.data.token);
-        await AsyncStorage.setItem('userToken', response.data.token);
-
-        Toast.show({
-          type: 'success',
-          text1: 'Başarılı',
-          text2: 'Giriş başarılı! Yönlendiriliyorsunuz...',
-          position: 'top',
-          visibilityTime: 2000,
-        });
-
-        setFormData({
-          email: '',
-          password: '',
-        });
-
+      if (response?.accessToken) {
+        isLoginSuccessful = true;
+        setShowSuccessModal(true);
         setTimeout(() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'MainApp' }],
-          });
+          login(response.accessToken);
         }, 2000);
-      }
-    } catch (err) {
-      console.error('Giriş hatası:', err.response?.data);
-
-      if (err.response?.data?.errors) {
-        const errors = err.response.data.errors;
-        if (errors.email) {
-          setTimeout(() => {
-            Toast.show({
-              type: 'error',
-              text1: 'E-posta Hatası',
-              text2: errors.email[0],
-              position: 'top',
-              visibilityTime: 3000,
-            });
-          }, 0);
-        }
-        if (errors.password) {
-          setTimeout(
-            () => {
-              Toast.show({
-                type: 'error',
-                text1: 'Şifre Hatası',
-                text2: errors.password[0],
-                position: 'top',
-                visibilityTime: 3000,
-              });
-            },
-            errors.email ? 3100 : 0
-          );
-        }
-      } else if (err.response?.data?.message) {
-        Toast.show({
-          type: 'error',
-          text1: 'Giriş Hatası',
-          text2: 'E-posta veya şifre hatalı',
-          position: 'top',
-          visibilityTime: 3000,
-        });
       } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Hata',
-          text2: 'Giriş yapılırken bir hata oluştu',
-          position: 'top',
-          visibilityTime: 3000,
-        });
+        throw new Error('Giriş başarısız, lütfen tekrar deneyin.');
       }
+    } catch (error) {
+      console.error('Giriş sırasında detaylı hata:', JSON.stringify(error, null, 2));
+      let errorMessage = 'Beklenmedik bir hata oluştu.';
+      if (error && typeof error === 'object') {
+        if (error.message && !error.errors) {
+          errorMessage = error.message;
+        } else if (error.errors && typeof error.errors === 'object') {
+          const firstErrorKey = Object.keys(error.errors)[0];
+          errorMessage = error.errors[firstErrorKey];
+        }
+      }
+      Toast.show({
+        type: 'error',
+        text1: 'Giriş Hatası',
+        text2: errorMessage,
+      });
     } finally {
-      setLoading(false);
+      if (!isLoginSuccessful) {
+        setLoading(false);
+      }
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
-      <View style={styles.header}>
-        <BackButton />
-        <Text style={styles.headerTitle}>Giriş Yap</Text>
-        <View style={styles.placeholder} />
-      </View>
-      <View style={styles.mainContent}>
-        <BackgroundLogo />
-        <View style={styles.inputContainer}>
-          <View style={getEmailValidationStyle()}>
-            <MaterialIcons
-              name='email'
-              size={20}
-              color={
-                formData.email.length > 0
-                  ? isValidEmail(formData.email)
-                    ? '#4CAF50'
-                    : '#FF5252'
-                  : '#666'
-              }
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder='E-posta Adresiniz'
-              placeholderTextColor='#666'
-              keyboardType='email-address'
-              autoCapitalize='none'
-              value={formData.email}
-              onChangeText={(text) => handleInputChange('email', text)}
-            />
-            {formData.email.length > 0 && (
-              <MaterialIcons
-                name={isValidEmail(formData.email) ? 'check-circle' : 'error'}
-                size={20}
-                color={isValidEmail(formData.email) ? '#4CAF50' : '#FF5252'}
-              />
-            )}
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle='dark-content' backgroundColor='#fff' />
+        <Modal
+            transparent={true}
+            visible={showSuccessModal}
+            animationType="fade"
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <ActivityIndicator size="large" color="#008B8B" />
+              <Text style={styles.modalText}>Giriş başarılı!</Text>
+              <Text style={styles.modalSubText}>Yönlendiriliyorsunuz...</Text>
+            </View>
           </View>
+        </Modal>
 
-          <View style={styles.inputWrapper}>
-            <MaterialIcons
-              name='lock'
-              size={20}
-              color='#666'
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder='Şifreniz'
-              secureTextEntry={!showPassword}
-              placeholderTextColor='#666'
-              value={formData.password}
-              onChangeText={(text) => handleInputChange('password', text)}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Ionicons
-                name={showPassword ? 'eye-off' : 'eye'}
-                size={20}
-                color='#666'
-                style={styles.eyeIcon}
+        <View style={styles.header}>
+          <BackButton />
+          <Text style={styles.headerTitle}>Giriş Yap</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.mainContent}>
+          <BackgroundLogo />
+          <View style={styles.inputContainer}>
+            <View style={getTCKNValidationStyle()}>
+              <MaterialIcons
+                  name='badge'
+                  size={20}
+                  color={
+                    formData.nationalId.length > 0
+                        ? isValidTCKN(formData.nationalId)
+                            ? '#4CAF50'
+                            : '#FF5252'
+                        : '#666'
+                  }
+                  style={styles.inputIcon}
               />
+              <TextInput
+                  style={styles.input}
+                  placeholder='T.C. Kimlik Numaranız'
+                  placeholderTextColor='#666'
+                  keyboardType='numeric'
+                  maxLength={11}
+                  value={formData.nationalId}
+                  onChangeText={(text) => handleInputChange('nationalId', text.replace(/[^0-9]/g, ''))}
+              />
+              {formData.nationalId.length > 0 && (
+                  <MaterialIcons
+                      name={isValidTCKN(formData.nationalId) ? 'check-circle' : 'error'}
+                      size={20}
+                      color={isValidTCKN(formData.nationalId) ? '#4CAF50' : '#FF5252'}
+                  />
+              )}
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <MaterialIcons
+                  name='lock'
+                  size={20}
+                  color='#666'
+                  style={styles.inputIcon}
+              />
+              <TextInput
+                  style={styles.input}
+                  placeholder='Şifreniz'
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor='#666'
+                  value={formData.password}
+                  onChangeText={(text) => handleInputChange('password', text)}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={20}
+                    color='#666'
+                    style={styles.eyeIcon}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+                style={styles.forgotPassword}
+                onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={styles.forgotPasswordText}>Şifremi Unuttum?</Text>
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity
-            style={styles.forgotPassword}
-            onPress={() => navigation.navigate('ForgotPassword')}
+              style={[
+                styles.loginButton,
+                (!isFormValid() || loading) && styles.loginButtonDisabled,
+              ]}
+              onPress={handleLogin}
+              disabled={!isFormValid() || loading}
           >
-            <Text style={styles.forgotPasswordText}>Şifremi Unuttum?</Text>
+            {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+            ) : (
+                <Text style={styles.loginButtonText}>Giriş Yap</Text>
+            )}
           </TouchableOpacity>
-        </View>
 
-        <TouchableOpacity
-          style={[
-            styles.loginButton,
-            (!isFormValid() || loading) && styles.loginButtonDisabled,
-          ]}
-          onPress={handleLogin}
-          disabled={!isFormValid() || loading}
-        >
-          <Text style={styles.loginButtonText}>
-            {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Hesabınız yok mu? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.signUpLink}>Kayıt Olun</Text>
-          </TouchableOpacity>
+          <View style={styles.signUpContainer}>
+            <Text style={styles.signUpText}>Hesabınız yok mu? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+              <Text style={styles.signUpLink}>Kayıt Olun</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-      <Toast />
-    </SafeAreaView>
+        <Toast />
+      </SafeAreaView>
   );
 };
 
@@ -279,10 +224,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginBottom: 40,
-  },
-  backButton: {
-    padding: 10,
-    marginLeft: -10,
   },
   headerTitle: {
     fontSize: 20,
@@ -318,11 +259,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 14,
   },
-  characterCount: {
-    color: '#666',
-    fontSize: 12,
-    marginLeft: 10,
-  },
   eyeIcon: {
     marginLeft: 10,
   },
@@ -341,6 +277,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     height: 55,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loginButtonDisabled: {
+    backgroundColor: '#A9A9A9',
   },
   loginButtonText: {
     color: '#fff',
@@ -368,6 +308,30 @@ const styles = StyleSheet.create({
   invalidInput: {
     borderWidth: 1,
     borderColor: '#FF5252',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    width: '80%',
+  },
+  modalText: {
+    fontSize: 18,
+    fontFamily: FONTS.inter.semiBold,
+    marginTop: 20,
+  },
+  modalSubText: {
+    fontSize: 14,
+    fontFamily: FONTS.inter.regular,
+    color: '#666',
+    marginTop: 5,
   },
 });
 

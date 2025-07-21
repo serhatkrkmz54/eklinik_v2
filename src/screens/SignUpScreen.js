@@ -1,16 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  SafeAreaView,
-  StatusBar,
-  Platform,
-  Modal,
-  ScrollView,
-  KeyboardAvoidingView,
+  View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView,
+  StatusBar, Platform, Modal, ScrollView, KeyboardAvoidingView, ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -18,677 +9,202 @@ import BackButton from '../components/BackButton';
 import { isValidEmail } from '../utils/validation';
 import { FONTS } from '../theme/fonts';
 import BackgroundLogo from '../components/BackgroundLogo';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
+
+// Gerekli servis ve context importları
+import { registerUser } from '../services/authService';
+import { AuthContext } from '../context/AuthContext';
+
+// Tarihi YYYY-MM-DD formatına çeviren yardımcı fonksiyon
+const formatDate = (date) => {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = (`0${d.getMonth() + 1}`).slice(-2);
+  const day = (`0${d.getDate()}`).slice(-2);
+  return `${year}-${month}-${day}`;
+};
 
 const SignUpScreen = () => {
   const navigation = useNavigation();
+  const { login } = useContext(AuthContext);
   const [showPassword, setShowPassword] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     tcKimlik: '',
     email: '',
-    phone: '',
+    phone: '+90',
     password: '',
     password_confirmation: '',
     agreeToTerms: false,
-    gender: 'none',
     birth_date: new Date(),
   });
 
-  useEffect(() => {
-    const checkToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem('userToken');
-        if (token) {
-          navigation.replace('MainApp');
-        }
-      } catch (err) {
-        await AsyncStorage.removeItem('userToken');
-      }
-    };
-
-    checkToken();
-  }, []);
-
-  const formatPhoneNumber = (text) => {
-    const numbers = text.replace(/[^\d]/g, '');
-
-    if (numbers.length <= 3) {
-      return `(${numbers}`;
-    } else if (numbers.length <= 6) {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
-    } else if (numbers.length <= 10) {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)} - ${numbers.slice(
-        6
-      )}`;
-    }
-    return numbers;
-  };
-
   const handleInputChange = (field, value) => {
-    if (field === 'tcKimlik') {
-      const numericValue = value.replace(/[^0-9]/g, '');
-      if (numericValue.length <= 11) {
-        setFormData((prev) => ({ ...prev, [field]: numericValue }));
-      }
-    } else if (field === 'phone') {
-      const numericValue = value.replace(/[^\d]/g, '');
-      if (numericValue.length <= 10) {
-        const formattedNumber = formatPhoneNumber(numericValue);
-        setFormData((prev) => ({ ...prev, [field]: formattedNumber }));
+    if (field === 'phone') {
+      const cleaned = value.replace(/[^+0-9]/g, '');
+      if (cleaned.startsWith('+90') || cleaned === '+' || cleaned === '+9') {
+        setFormData(prev => ({ ...prev, [field]: cleaned }));
       }
     } else {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+      setFormData(prev => ({ ...prev, [field]: value }));
     }
   };
 
-  const getEmailValidationStyle = () => {
-    if (formData.email.length === 0) return styles.inputWrapper;
-    return isValidEmail(formData.email)
-      ? [styles.inputWrapper, styles.validInput]
-      : [styles.inputWrapper, styles.invalidInput];
-  };
-
-  const isFormValid = () => {
-    return (
-      formData.email.trim() !== '' &&
+  const isFormValid = () => (
       isValidEmail(formData.email) &&
-      formData.password.trim() !== '' &&
-      formData.password_confirmation.trim() !== '' &&
+      formData.password.trim().length >= 6 &&
       formData.password === formData.password_confirmation &&
-      formData.name.trim() !== '' &&
+      formData.firstName.trim().length >= 3 &&
+      formData.lastName.trim().length >= 3 &&
       formData.tcKimlik.trim().length === 11 &&
-      formData.phone.trim() !== '' &&
+      /^\+90\d{10}$/.test(formData.phone) &&
       formData.agreeToTerms
-    );
-  };
+  );
 
   const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
+    setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
-      setFormData((prev) => ({
-        ...prev,
-        birth_date: selectedDate,
-      }));
+      setFormData(prev => ({ ...prev, birth_date: selectedDate }));
     }
-  };
-
-  const formatDate = (date) => {
-    return date.toISOString().split('T')[0];
   };
 
   const handleSignUp = async () => {
+    if (!isFormValid()) {
+      Toast.show({ type: 'error', text1: 'Eksik Bilgi', text2: 'Lütfen tüm alanları doğru bir şekilde doldurun.' });
+      return;
+    }
+    setLoading(true);
+    let isSignUpSuccessful = false;
     try {
-      setLoading(true);
-      setError('');
-      const response = await axios.post('http://132.226.194.153/api/register', {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        password_confirmation: formData.password,
-        tckn: formData.tcKimlik,
-        phoneNumber: formData.phone.replace(/[^0-9]/g, ''),
-        gender: formData.gender,
-        birth_date: formatDate(formData.birth_date),
-      });
+      const response = await registerUser(formData);
 
-      if (response.data) {
-        console.log('Kayıt başarılı! Token:', response.data.token);
-        await AsyncStorage.setItem('userToken', response.data.token);
-        setFormData({
-          name: '',
-          tcKimlik: '',
-          email: '',
-          phone: '',
-          password: '',
-          password_confirmation: '',
-          agreeToTerms: false,
-          gender: 'none',
-          birth_date: new Date(),
-        });
-
-        Toast.show({
-          type: 'success',
-          text1: 'Başarılı',
-          text2:
-            'Kayıt işlemi başarıyla tamamlandı. Giriş sayfasına yönlendiriliyorsunuz.',
-          position: 'top',
-          visibilityTime: 3000,
-        });
-
+      if (response?.accessToken) {
+        isSignUpSuccessful = true;
+        setShowSuccessModal(true);
         setTimeout(() => {
-          navigation.navigate('Login');
-        }, 3000);
+          login(response.accessToken);
+        }, 2000);
+      } else {
+        throw new Error('Kayıt sonrası token alınamadı.');
       }
     } catch (err) {
-      console.error('Kayıt hatası:', err.reponse?.dasta);
-      let errorMessages = [];
-
-      if (err.response?.data?.errors) {
-        const errors = err.response.data.errors;
-
-        if (errors.email) {
-          errorMessages.push(errors.email[0]);
-        }
-
-        if (errors.password) {
-          errorMessages.push(errors.password[0]);
-        }
-
-        if (errors.tckn) {
-          errorMessages.push(errors.tckn[0]);
-        }
-      }
-      if (errorMessages.length === 0) {
-        errorMessages.push('Kayıt işlemi sırasında bir hata oluştu');
-      }
+      console.error('Kayıt hatası:', err);
+      let errorMessage = 'Kayıt işlemi sırasında bir hata oluştu.';
+      if (err?.message) errorMessage = err.message;
+      if (err?.errors) errorMessage = Object.values(err.errors).join('\n');
 
       Toast.show({
         type: 'error',
-        text1: 'Hata',
-        text2: errorMessages.join('\n'),
-        position: 'top',
-        visibilityTime: 4000,
+        text1: 'Kayıt Hatası',
+        text2: errorMessage,
       });
-
-      setError(errorMessages.join('\n'));
     } finally {
-      setLoading(false);
+      if (!isSignUpSuccessful) {
+        setLoading(false);
+      }
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle='dark-content' backgroundColor='#fff' />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 40}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
-          keyboardShouldPersistTaps='handled'
-          keyboardDismissMode='on-drag'
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle='dark-content' backgroundColor='#fff' />
+        <Modal
+            transparent={true}
+            visible={showSuccessModal}
+            animationType="fade"
         >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <ActivityIndicator size="large" color="#008B8B" />
+              <Text style={styles.modalText}>Kayıt başarıyla tamamlandı!</Text>
+              <Text style={styles.modalSubText}>Sisteme giriş yapılıyor...</Text>
+            </View>
+          </View>
+        </Modal>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <View style={styles.header}>
             <BackButton />
             <Text style={styles.headerTitle}>Kayıt Ol</Text>
-            <View style={styles.placeholder} />
+            <View style={{width: 34}}/>
           </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 50, marginTop: 20 }} keyboardShouldPersistTaps='handled'>
+            <BackgroundLogo style={{ height: 100, marginBottom: 20 }} />
 
-          <View style={[styles.mainContent, { paddingTop: 0 }]}>
-            <BackgroundLogo style={{ height: 120 }} />
-            <View style={styles.inputContainer}>
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name='person'
-                  size={20}
-                  color='#666'
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder='Ad Soyad'
-                  placeholderTextColor='#666'
-                  value={formData.name}
-                  onChangeText={(text) => handleInputChange('name', text)}
-                />
-              </View>
+            {/* GÜNCELLENDİ: Ad ve Soyad için iki ayrı input alanı */}
+            <View style={styles.inputWrapper}><MaterialIcons name='person' size={20} color='#666' style={styles.inputIcon} /><TextInput style={styles.input} placeholder='Ad' value={formData.firstName} onChangeText={(text) => handleInputChange('firstName', text)}/></View>
+            <View style={styles.inputWrapper}><MaterialIcons name='person' size={20} color='#666' style={styles.inputIcon} /><TextInput style={styles.input} placeholder='Soyad' value={formData.lastName} onChangeText={(text) => handleInputChange('lastName', text)}/></View>
 
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name='credit-card'
-                  size={20}
-                  color='#666'
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder='TC Kimlik Numarası'
-                  placeholderTextColor='#666'
-                  keyboardType='numeric'
-                  maxLength={11}
-                  value={formData.tcKimlik}
-                  onChangeText={(text) => handleInputChange('tcKimlik', text)}
-                />
-                {formData.tcKimlik.length > 0 &&
-                  (formData.tcKimlik.length === 11 ? (
-                    <MaterialIcons
-                      name='check-circle'
-                      size={20}
-                      color='#4CAF50'
-                    />
-                  ) : (
-                    <Text style={styles.characterCount}>
-                      {formData.tcKimlik.length}/11
-                    </Text>
-                  ))}
-              </View>
+            <View style={styles.inputWrapper}><MaterialIcons name='credit-card' size={20} color='#666' style={styles.inputIcon} /><TextInput style={styles.input} placeholder='TC Kimlik Numarası' keyboardType='numeric' maxLength={11} value={formData.tcKimlik} onChangeText={(text) => handleInputChange('tcKimlik', text.replace(/[^0-9]/g, ''))}/></View>
+            <View style={styles.inputWrapper}><MaterialIcons name='email' size={20} color='#666' style={styles.inputIcon} /><TextInput style={styles.input} placeholder='E-posta Adresi' keyboardType='email-address' autoCapitalize='none' value={formData.email} onChangeText={(text) => handleInputChange('email', text)}/></View>
+            <View style={styles.inputWrapper}><MaterialIcons name='phone' size={20} color='#666' style={styles.inputIcon} /><TextInput style={styles.input} placeholder='Telefon (+905...)' keyboardType='phone-pad' maxLength={13} value={formData.phone} onChangeText={(text) => handleInputChange('phone', text)}/></View>
+            <View style={styles.inputWrapper}><MaterialIcons name='lock' size={20} color='#666' style={styles.inputIcon} /><TextInput style={styles.input} placeholder='Şifre (en az 6 karakter)' secureTextEntry={!showPassword} value={formData.password} onChangeText={(text) => handleInputChange('password', text)}/><TouchableOpacity onPress={() => setShowPassword(v => !v)}><Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color='#666' /></TouchableOpacity></View>
+            <View style={styles.inputWrapper}><MaterialIcons name='lock' size={20} color='#666' style={styles.inputIcon} /><TextInput style={styles.input} placeholder='Şifre Onay' secureTextEntry={!showPassword} value={formData.password_confirmation} onChangeText={(text) => handleInputChange('password_confirmation', text)}/></View>
 
-              <View style={getEmailValidationStyle()}>
-                <MaterialIcons
-                  name='email'
-                  size={20}
-                  color={
-                    formData.email.length > 0
-                      ? isValidEmail(formData.email)
-                        ? '#4CAF50'
-                        : '#FF5252'
-                      : '#666'
-                  }
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder='E-posta Adresi'
-                  placeholderTextColor='#666'
-                  keyboardType='email-address'
-                  autoCapitalize='none'
-                  value={formData.email}
-                  onChangeText={(text) => handleInputChange('email', text)}
-                />
-                {formData.email.length > 0 && (
-                  <MaterialIcons
-                    name={
-                      isValidEmail(formData.email) ? 'check-circle' : 'error'
-                    }
-                    size={20}
-                    color={isValidEmail(formData.email) ? '#4CAF50' : '#FF5252'}
-                  />
-                )}
-              </View>
+            <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}><MaterialIcons name='calendar-today' size={20} color='#666' style={styles.inputIcon} /><Text style={styles.dateButtonText}>Doğum Tarihi: {formatDate(formData.birth_date)}</Text></TouchableOpacity>
+            {showDatePicker && (<DateTimePicker value={formData.birth_date} mode='date' display='default' onChange={handleDateChange} maximumDate={new Date()} />)}
 
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name='phone'
-                  size={20}
-                  color='#666'
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder='Telefon Numarası'
-                  placeholderTextColor='#666'
-                  keyboardType='numeric'
-                  value={formData.phone}
-                  onChangeText={(text) => handleInputChange('phone', text)}
-                />
-              </View>
+            <View style={styles.termsContainer}><TouchableOpacity style={styles.checkbox} onPress={() => handleInputChange('agreeToTerms', !formData.agreeToTerms)}>{formData.agreeToTerms && (<MaterialIcons name='check' size={16} color='#008B8B' />)}</TouchableOpacity><Text style={styles.termsText}>Kullanım koşullarını <Text style={styles.termsLink} onPress={() => setShowTerms(true)}>kabul ediyorum</Text></Text></View>
+            <TouchableOpacity style={[styles.signUpButton, (!isFormValid() || loading) && styles.signUpButtonDisabled]} disabled={!isFormValid() || loading} onPress={handleSignUp}><Text style={styles.signUpButtonText}>{loading ? 'Kaydediliyor...' : 'Kayıt Ol'}</Text></TouchableOpacity>
+            <View style={styles.loginContainer}><Text style={styles.loginText}>Zaten hesabınız var mı? </Text><TouchableOpacity onPress={() => navigation.navigate('Login')}><Text style={styles.loginLink}>Giriş Yap</Text></TouchableOpacity></View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name='lock'
-                  size={20}
-                  color='#666'
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder='Şifre'
-                  secureTextEntry={!showPassword}
-                  placeholderTextColor='#666'
-                  value={formData.password}
-                  onChangeText={(text) => handleInputChange('password', text)}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color='#666'
-                    style={styles.eyeIcon}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name='lock'
-                  size={20}
-                  color='#666'
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder='Şifre Onay'
-                  secureTextEntry={!showPassword}
-                  placeholderTextColor='#666'
-                  value={formData.password_confirmation}
-                  onChangeText={(text) =>
-                    handleInputChange('password_confirmation', text)
-                  }
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color='#666'
-                    style={styles.eyeIcon}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputWrapper}>
-                <MaterialIcons
-                  name='person'
-                  size={20}
-                  color='#666'
-                  style={styles.inputIcon}
-                />
-                <Picker
-                  selectedValue={formData.gender}
-                  style={styles.picker}
-                  onValueChange={(value) => handleInputChange('gender', value)}
-                  dropdownIconColor='#666'
-                >
-                  <Picker.Item label='Cinsiyet Seçin' value='none' />
-                  <Picker.Item label='Erkek' value='male' />
-                  <Picker.Item label='Kadın' value='female' />
-                </Picker>
-              </View>
-
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <MaterialIcons
-                  name='calendar-today'
-                  size={20}
-                  color='#666'
-                  style={styles.inputIcon}
-                />
-                <Text style={styles.dateButtonText}>
-                  Doğum Tarihi: {formatDate(formData.birth_date)}
-                </Text>
-              </TouchableOpacity>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={formData.birth_date}
-                  mode='date'
-                  display='default'
-                  onChange={handleDateChange}
-                  maximumDate={new Date()}
-                />
-              )}
-
-              <View style={styles.termsContainer}>
-                <TouchableOpacity
-                  style={styles.checkbox}
-                  onPress={() =>
-                    handleInputChange('agreeToTerms', !formData.agreeToTerms)
-                  }
-                >
-                  {formData.agreeToTerms && (
-                    <MaterialIcons name='check' size={16} color='#008B8B' />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.termsTextContainer}>
-                  <Text style={styles.termsText}>
-                    Kullanım koşullarını{' '}
-                    <Text
-                      style={styles.termsLink}
-                      onPress={() => setShowTerms(true)}
-                    >
-                      kabul ediyorum
-                    </Text>
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.signUpButton,
-                (!isFormValid() || loading) && styles.signUpButtonDisabled,
-              ]}
-              disabled={!isFormValid() || loading}
-              onPress={handleSignUp}
-            >
-              <Text style={styles.signUpButtonText}>
-                {loading ? 'Kaydediliyor...' : 'Kayıt Ol'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Zaten hesabınız var mı? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.loginLink}>Giriş Yap</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Modal kısmı burası - Kullanım koşullarını kabul ediyorum kısmı */}
-      <Modal
-        animationType='slide'
-        transparent={true}
-        visible={showTerms}
-        onRequestClose={() => setShowTerms(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Kullanım Koşulları</Text>
-              <TouchableOpacity onPress={() => setShowTerms(false)}>
-                <MaterialIcons name='close' size={24} color='#000' />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.modalText}>
-                1. Gizlilik ve Güvenlik{'\n\n'}
-                Kişisel verileriniz güvenli bir şekilde saklanacak ve üçüncü
-                taraflarla paylaşılmayacaktır.{'\n\n'}
-                2. Hizmet Kullanımı{'\n\n'}
-                Sistemimiz üzerinden randevu alırken doğru ve güncel bilgiler
-                kullanmanız gerekmektedir.{'\n\n'}
-                3. Sorumluluklar{'\n\n'}
-                Randevunuza gelemeyecekseniz en az 24 saat öncesinden iptal
-                etmeniz gerekmektedir.{'\n\n'}
-                4. İletişim{'\n\n'}
-                Sistemle ilgili tüm sorunlarınızı destek ekibimize
-                bildirebilirsiniz.
-              </Text>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-      {/* Modal kısmı burası - Kullanım koşullarını kabul ediyorum kısmı */}
-      <Toast />
-    </SafeAreaView>
+        <Modal animationType='slide' transparent={true} visible={showTerms} onRequestClose={() => setShowTerms(false)}>
+          <View style={styles.modalContainer}><View style={styles.modalContent}><View style={styles.modalHeader}><Text style={styles.modalTitle}>Kullanım Koşulları</Text><TouchableOpacity onPress={() => setShowTerms(false)}><MaterialIcons name='close' size={24} color='#000' /></TouchableOpacity></View><ScrollView style={styles.modalBody}><Text style={styles.modalText}>1. Gizlilik ve Güvenlik{'\n\n'}Kişisel verileriniz güvenli bir şekilde saklanacak ve üçüncü taraflarla paylaşılmayacaktır.{'\n\n'}2. Hizmet Kullanımı{'\n\n'}Sistemimiz üzerinden randevu alırken doğru ve güncel bilgiler kullanmanız gerekmektedir.{'\n\n'}3. Sorumluluklar{'\n\n'}Randevunuza gelemeyecekseniz en az 24 saat öncesinden iptal etmeniz gerekmektedir.</Text></ScrollView></View></View>
+        </Modal>
+        <Toast />
+      </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 40,
-  },
-  backButton: {
-    padding: 10,
-    marginLeft: -10,
-  },
-  headerTitle: {
-    fontFamily: FONTS.inter.semiBold,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  placeholder: {
-    width: 34,
-  },
-  mainContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  inputContainer: {
-    marginBottom: 30,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    height: 55,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    color: '#000',
-    fontSize: 14,
-  },
-  characterCount: {
-    color: '#666',
-    fontSize: 12,
-    marginLeft: 10,
-  },
-  eyeIcon: {
-    marginLeft: 10,
-  },
-  termsContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 10,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#008B8B',
-    marginRight: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  termsTextContainer: {
-    flex: 1,
-  },
-  termsText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  termsLink: {
-    color: '#008B8B',
-    textDecorationLine: 'underline',
-  },
-  signUpButton: {
-    backgroundColor: '#008B8B',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    height: 55,
-    justifyContent: 'center',
-  },
-  signUpButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  signUpButtonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontSize: 14,
-    fontFamily: FONTS.poppins.semiBold,
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 70,
-  },
-  loginText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  loginLink: {
-    color: '#008B8B',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 20, marginBottom: 10 },
+  headerTitle: { fontFamily: FONTS.inter.semiBold, fontSize: 20, color: '#000' },
+  inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 12, marginBottom: 15, paddingHorizontal: 15, height: 55 },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, color: '#000', fontSize: 14 },
+  dateButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 12, marginBottom: 15, paddingHorizontal: 15, height: 55 },
+  dateButtonText: { color: '#000', fontSize: 14 },
+  termsContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 20 },
+  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: '#008B8B', marginRight: 10, justifyContent: 'center', alignItems: 'center' },
+  termsText: { fontSize: 14, color: '#666' },
+  termsLink: { color: '#008B8B', textDecorationLine: 'underline' },
+  signUpButton: { backgroundColor: '#008B8B', padding: 16, borderRadius: 12, marginBottom: 20, height: 55, justifyContent: 'center', alignItems: 'center' },
+  signUpButtonDisabled: { backgroundColor: '#A9A9A9' },
+  signUpButtonText: { color: '#fff', textAlign: 'center', fontSize: 16, fontFamily: FONTS.poppins.semiBold },
+  loginContainer: { flexDirection: 'row', justifyContent: 'center' },
+  loginText: { color: '#666', fontSize: 16 },
+  loginLink: { color: '#008B8B', fontWeight: '600', fontSize: 16 },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    width: '90%',
-    maxHeight: '80%',
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: 30,
+    borderRadius: 15,
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    color: '#000',
-  },
-  modalBody: {
-    maxHeight: '90%',
+    width: '80%',
   },
   modalText: {
+    fontSize: 18,
+    fontFamily: FONTS.inter.semiBold,
+    marginTop: 20,
+  },
+  modalSubText: {
     fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  validInput: {
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-  },
-  invalidInput: {
-    borderWidth: 1,
-    borderColor: '#FF5252',
-  },
-  disabledButton: {
-    backgroundColor: '#cccccc',
-    opacity: 0.7,
-  },
-  picker: {
-    flex: 1,
-    color: '#000',
-    marginLeft: -10,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    height: 55,
-  },
-  dateButtonText: {
-    flex: 1,
-    color: '#000',
-    fontSize: 14,
+    fontFamily: FONTS.inter.regular,
+    color: '#666',
+    marginTop: 5,
   },
 });
 

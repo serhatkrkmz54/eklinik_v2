@@ -1,67 +1,138 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, StatusBar, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, {useState, useCallback, useEffect} from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, StatusBar, Platform, ActivityIndicator } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { FONTS } from '../theme/fonts';
 import BackgroundLogo from '../components/BackgroundLogo';
+import Toast from 'react-native-toast-message';
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
 
-const PoliklinikItem = ({ icon, title, onPress }) => (
-  <TouchableOpacity 
-    style={styles.poliklinikItem} 
-    onPress={onPress}
-    activeOpacity={0.8}
-  >
-    <View style={styles.poliklinikIcon}>
-      {icon}
-    </View>
-    <Text style={styles.poliklinikTitle} numberOfLines={2}>{title}</Text>
-  </TouchableOpacity>
+// GÜNCELLENDİ: Yeni oluşturduğumuz servisi import ediyoruz
+import { getAllClinics } from '../services/clinicService';
+
+const clinicImageMap = {
+  'algoloji': require('../../assets/poliklinikler/algoloji.png'),
+  'beyin cerrahı': require('../../assets/poliklinikler/beyincerrahi.png'),
+  'kadın doğum': require('../../assets/poliklinikler/kadindogum.png'),
+  'kadın hastalıkları': require('../../assets/poliklinikler/kadindogum.png'),
+  'biyokimya': require('../../assets/poliklinikler/biyokimya.png'),
+  'dahiliye': require('../../assets/poliklinikler/dahiliye.png'),
+  'göğüs hastalıkları': require('../../assets/poliklinikler/goguscerrahi.png'),
+  'cildiye': require('../../assets/poliklinikler/cildiye.png'),
+  'psikiyatri': require('../../assets/poliklinikler/psikiyatri.png'),
+  'kardiyoloji': require('../../assets/poliklinikler/kardiyoloji.png'),
+  'çocuk hastalıkları': require('../../assets/poliklinikler/cocukhastaliklari.png'),
+  'göz hastalıkları': require('../../assets/poliklinikler/gozhastaliklari.png'),
+  'fizik tedavi': require('../../assets/poliklinikler/fiziktedvereh.png'),
+  'nöroloji': require('../../assets/poliklinikler/noroloji.png'),
+  'ortopedi': require('../../assets/poliklinikler/ortopedivetravmatoloji.png'),
+  'kulak burun boğaz': require('../../assets/poliklinikler/kulakburunbogaz.png'),
+  'üroloji': require('../../assets/poliklinikler/uroloji.png'),
+  // Eşleşme bulunamazsa kullanılacak varsayılan resim
+  default: require('../../assets/medics-logo.png')
+};
+
+// GÜNCELLENDİ: Klinik ismine göre doğru resmi bulan yardımcı fonksiyon
+const getClinicImage = (name) => {
+  if (!name) return clinicImageMap.default;
+  const normalizedName = name.toLowerCase().trim();
+  return clinicImageMap[normalizedName] || clinicImageMap.default;
+};
+
+const PoliklinikItem = ({ iconSource, title, onPress }) => (
+    <TouchableOpacity style={styles.poliklinikItem} onPress={onPress} activeOpacity={0.8}>
+      <View style={styles.poliklinikIcon}>
+        <Image source={iconSource} style={styles.poliklinikImage} resizeMode="contain" />
+      </View>
+      <Text style={styles.poliklinikTitle} numberOfLines={2}>{title}</Text>
+    </TouchableOpacity>
 );
 
 const PolikliniklerScreen = () => {
   const navigation = useNavigation();
+  const [clinics, setClinics] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const poliklinikler = [
-    { icon: require('../../assets/poliklinikler/algoloji.png'), title: "Algoloji" },
-    { icon: require('../../assets/poliklinikler/beyincerrahi.png'), title: "Beyin Cerrahı" },
-    { icon: require('../../assets/poliklinikler/kadindogum.png'), title: "Kadın Doğum" },
-    { icon: require('../../assets/poliklinikler/biyokimya.png'), title: "BiyoKimya" },
-    { icon: require('../../assets/poliklinikler/dahiliye.png'), title: "Dahiliye" },
-    { icon: require('../../assets/poliklinikler/goguscerrahi.png'), title: "Göğüs Hastalıkları" },
-    { icon: require('../../assets/poliklinikler/cildiye.png'), title: "Cildiye" },
-    { icon: require('../../assets/poliklinikler/psikiyatri.png'), title: "Psikiyatri" },
-    { icon: require('../../assets/poliklinikler/kardiyoloji.png'), title: "Kardiyoloji" },
-    { icon: require('../../assets/poliklinikler/cocukhastaliklari.png'), title: "Çocuk Hastalıkları" },
-    { icon: require('../../assets/poliklinikler/gozhastaliklari.png'), title: "Göz Hastalıkları" },
-    { icon: require('../../assets/poliklinikler/fiziktedvereh.png'), title: "Fizik Tedavi" },
-    { icon: require('../../assets/poliklinikler/noroloji.png'), title: "Nöroloji" },
-    { icon: require('../../assets/poliklinikler/kadindogum.png'), title: "Kadın Hastalıkları" },
-    { icon: require('../../assets/poliklinikler/ortopedivetravmatoloji.png'), title: "Ortopedi" },
-    { icon: require('../../assets/poliklinikler/kulakburunbogaz.png'), title: "Kulak Burun Boğaz" }
-  ];
+  const fetchClinics = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getAllClinics();
+      setClinics(data);
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Hata', text2: error.message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(fetchClinics);
+
+  useEffect(() => {
+    const WEBSOCKET_URL = '[http://192.168.1.34:8080/ws](http://192.168.1.34:8080/ws)'; // DİKKAT: Kendi IP adresinizi yazın.
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(WEBSOCKET_URL),
+      debug: (str) => {
+        console.log(new Date(), str);
+      },
+      onConnect: () => {
+        console.log('WebSocket bağlantısı kuruldu.');
+        client.subscribe('/topic/clinics', (message) => {
+          try {
+            const newClinic = JSON.parse(message.body);
+            console.log('Yeni klinik bilgisi alındı:', newClinic);
+            setClinics(prevClinics => {
+              if (prevClinics.some(c => c.id === newClinic.id)) {
+                return prevClinics;
+              }
+              return [newClinic, ...prevClinics];
+            });
+          } catch (e) {
+            console.error("Gelen WebSocket mesajı parse edilemedi:", e);
+          }
+        });
+      },
+      onStompError: (frame) => {
+        console.error('Broker reported error: ' + frame.headers['message']);
+        console.error('Additional details: ' + frame.body);
+      },
+    });
+
+    client.activate();
+
+    return () => {
+      if (client) {
+        client.deactivate();
+        console.log('WebSocket bağlantısı kapatıldı.');
+      }
+    };
+  }, []);
 
   return (
-    <View style={styles.container}>
+      <View style={styles.container}>
         <BackgroundLogo />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Poliklinikler - Hızlı Randevu</Text>
-      </View>
-
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.poliklinikGrid}>
-          {poliklinikler.map((item, index) => (
-            <PoliklinikItem
-              key={index}
-              icon={<Image source={item.icon} style={styles.poliklinikImage} resizeMode="contain" />}
-              title={item.title}
-              onPress={() => navigation.navigate('Randevu')}
-            />
-          ))}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Poliklinikler - Hızlı Randevu</Text>
         </View>
-      </ScrollView>
-    </View>
+
+        {loading ? (
+            <ActivityIndicator style={{ flex: 1 }} size="large" color="#008B8B" />
+        ) : (
+            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+              <View style={styles.poliklinikGrid}>
+                {/* GÜNCELLENDİ: API'den gelen dinamik veri ile render ediliyor */}
+                {clinics.map((item) => (
+                    <PoliklinikItem
+                        key={item.id}
+                        iconSource={getClinicImage(item.name)}
+                        title={item.name}
+                        onPress={() => navigation.navigate('Randevu')} // TODO: Burayı ilgili kliniğin doktorlarını listeleyecek şekilde güncelleyebilirsiniz.
+                    />
+                ))}
+              </View>
+            </ScrollView>
+        )}
+      </View>
   );
 };
 
@@ -89,12 +160,12 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   scrollContent: {
-    paddingBottom: 140,
+    paddingBottom: 40,
   },
   poliklinikGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     paddingHorizontal: 5,
   },
   poliklinikItem: {
@@ -137,4 +208,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PolikliniklerScreen; 
+export default PolikliniklerScreen;
