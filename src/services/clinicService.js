@@ -13,3 +13,16 @@ export const getAllClinics = async () => {
         throw error.response?.data || { message: 'Klinikler getirilirken bir hata oluştu.' };
     }
 };
+
+export const getDoctorsByClinic = async (clinicId) => {
+    if (!clinicId) {
+        throw new Error("Klinik ID'si belirtilmelidir.");
+    }
+    try {
+        const response = await api.get(`/patient/clinics/${clinicId}/doctors`);
+        return response.data;
+    } catch (error) {
+        console.error(`Klinik ID'si ${clinicId} olan doktorlar getirilirken hata:`, error.response?.data || error.message);
+        throw error.response?.data || { message: "Doktorlar yüklenemedi. Lütfen daha sonra tekrar deneyin." };
+    }
+};

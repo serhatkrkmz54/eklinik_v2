@@ -21,8 +21,9 @@ import DoktorDetay from './src/screens/DoktorDetay';
 import RandevularScreen from './src/screens/RandevularScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AmbulansCagirScreen from './src/screens/AmbulansCagirScreen';
-import TumDoktorlarEkrani from './src/screens/TumDoktorlarEkrani';
+import TumDoktorlarEkrani from './src/screens/DoktorlarScreen';
 import EditProfileScreen from "./src/screens/EditProfileScreen";
+import DoktorlarScreen from "./src/screens/DoktorlarScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -79,16 +80,16 @@ const TabNavigator = () => {
                     ),
                 }}
             />
-            <Tab.Screen
-                name='TumDoktorlarEkrani'
-                component={TumDoktorlarEkrani}
-                options={{
-                    tabBarLabel: 'Doktorlar',
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name='people' size={size} color={color} />
-                    ),
-                }}
-            />
+            {/*<Tab.Screen*/}
+            {/*    name='TumDoktorlarEkrani'*/}
+            {/*    component={TumDoktorlarEkrani}*/}
+            {/*    options={{*/}
+            {/*        tabBarLabel: 'Doktorlar',*/}
+            {/*        tabBarIcon: ({ color, size }) => (*/}
+            {/*            <MaterialIcons name='people' size={size} color={color} />*/}
+            {/*        ),*/}
+            {/*    }}*/}
+            {/*/>*/}
             <Tab.Screen
                 name='Calendar'
                 component={RandevularScreen}
@@ -115,6 +116,7 @@ const TabNavigator = () => {
 const AppStack = () => (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainApp" component={TabNavigator} />
+        <Stack.Screen name="Doktorlar" component={DoktorlarScreen} />
         <Stack.Screen name="DoktorDetay" component={DoktorDetay} />
         <Stack.Screen name='Randevular' component={RandevularScreen} />
         <Stack.Screen
