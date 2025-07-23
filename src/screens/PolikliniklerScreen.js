@@ -228,7 +228,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f4f8',
-    marginTop: 10,
   },
   loaderContainer: {
     flex: 1,
@@ -318,7 +317,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 10,
-    paddingBottom: 80,
+    paddingBottom: 125,
   },
   row: {
     justifyContent: 'space-between',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,22 +11,13 @@ import {
   ActivityIndicator,
   FlatList,
   SafeAreaView,
-  Modal, // Alert yerine Modal kullanacağız
+  Modal,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONTS } from '../theme/fonts';
 import Toast from 'react-native-toast-message';
-import { getDoctorById, getSlotsByDoctorAndDate, bookAppointment } from '../services/doctorService';
+import { useDoctor, useDoctorSlots, bookAppointment } from '../services/doctorService';
 import BackButton from '../components/BackButton';
-
-// Yardımcı Fonksiyonlar
-const formatDateForApi = (date) => {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = (`0${d.getMonth() + 1}`).slice(-2);
-  const day = (`0${d.getDate()}`).slice(-2);
-  return `${year}-${month}-${day}`;
-};
 
 const formatTime = (dateTimeString) => {
   const date = new Date(dateTimeString);
@@ -40,78 +31,61 @@ const defaultAvatar = {
 const DoktorDetayScreen = ({ route, navigation }) => {
   const { doctorId } = route.params;
 
-  const [doctor, setDoctor] = useState(null);
-  const [slots, setSlots] = useState([]);
-  const [calendarDates, setCalendarDates] = useState([]);
+  const { doctor, isLoading: isLoadingDoctor, isError: isErrorDoctor } = useDoctor(doctorId);
+  const { slotsData, isLoadingSlots, isErrorSlots, mutateSlots } = useDoctorSlots(doctorId);
+
+  const [isBooking, setIsBooking] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [slotsLoading, setSlotsLoading] = useState(false);
-  const [isModalVisible, setModalVisible] = useState(false); // Modal için state
-  const [isBooking, setIsBooking] = useState(false); // Randevu alınıyor durumu
+
+  const calendarDates = useMemo(() => {
+    if (!slotsData) return [];
+
+    const allAvailableDays = Object.keys(slotsData)
+        .map(dateStr => new Date(dateStr + 'T00:00:00'))
+        .sort((a, b) => a - b);
+
+    const now = new Date();
+    const endOfWorkDay = new Date();
+    endOfWorkDay.setHours(17, 0, 0, 0);
+
+    let calendarStartDate = new Date();
+    calendarStartDate.setHours(0, 0, 0, 0);
+
+    if (now > endOfWorkDay) {
+      calendarStartDate.setDate(calendarStartDate.getDate() + 1);
+    }
+
+    const futureAvailableDays = allAvailableDays.filter(day => day >= calendarStartDate);
+    const finalCalendarDays = futureAvailableDays.slice(0, 7);
+
+    return finalCalendarDays;
+
+  }, [slotsData]);
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setLoading(true);
-        const doctorData = await getDoctorById(doctorId);
-        setDoctor(doctorData);
+    if (calendarDates.length > 0 && !selectedDate) {
+      setSelectedDate(calendarDates[0]);
+    }
+  }, [calendarDates, selectedDate]);
 
-        const availableDays = [];
-        let currentDate = new Date();
+  const slotsForSelectedDate = useMemo(() => {
+    if (!selectedDate || !slotsData) return [];
 
-        while (availableDays.length < 7) {
-          const formattedDate = formatDateForApi(currentDate);
-          const slotsForDay = await getSlotsByDoctorAndDate(doctorData.doctorId, formattedDate);
+    const d = new Date(selectedDate);
+    const year = d.getFullYear();
+    const month = (`0${d.getMonth() + 1}`).slice(-2);
+    const day = (`0${d.getDate()}`).slice(-2);
+    const formattedDate = `${year}-${month}-${day}`;
 
-          const isToday = currentDate.toDateString() === new Date().toDateString();
-          const hasFutureSlots = slotsForDay.some(slot => new Date(slot.startTime) > new Date());
+    return slotsData[formattedDate] || [];
+  }, [selectedDate, slotsData]);
 
-          if ((isToday && hasFutureSlots) || (!isToday && slotsForDay.length > 0)) {
-            availableDays.push(new Date(currentDate));
-          }
-
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        setCalendarDates(availableDays);
-        if (availableDays.length > 0) {
-          setSelectedDate(availableDays[0]);
-        }
-
-      } catch (error) {
-        Toast.show({ type: 'error', text1: 'Hata', text2: "Doktor bilgileri veya takvim yüklenemedi." });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInitialData();
-  }, [doctorId]);
-
-  useEffect(() => {
-    if (!doctor || !selectedDate) return;
-
-    const fetchSlots = async () => {
-      try {
-        setSlotsLoading(true);
-        setSelectedSlot(null);
-        const formattedDate = formatDateForApi(selectedDate);
-        const allSlots = await getSlotsByDoctorAndDate(doctor.doctorId, formattedDate);
-        setSlots(allSlots);
-      } catch (error) {
-        Toast.show({ type: 'error', text1: 'Hata', text2: error.message });
-        setSlots([]);
-      } finally {
-        setSlotsLoading(false);
-      }
-    };
-    fetchSlots();
-  }, [selectedDate, doctor]);
 
   const handleBookingPress = () => {
     if (!selectedSlot) return;
-    setModalVisible(true); // Alert yerine modalı göster
+    setModalVisible(true);
   };
 
   const confirmBooking = async () => {
@@ -125,10 +99,9 @@ const DoktorDetayScreen = ({ route, navigation }) => {
         text2: `Randevunuz başarıyla oluşturuldu.`
       });
 
-      const formattedDate = formatDateForApi(selectedDate);
-      const updatedSlots = await getSlotsByDoctorAndDate(doctor.doctorId, formattedDate);
-      setSlots(updatedSlots);
+      mutateSlots();
       setSelectedSlot(null);
+
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Hata', text2: error.message });
     } finally {
@@ -137,18 +110,19 @@ const DoktorDetayScreen = ({ route, navigation }) => {
     }
   };
 
-  if (loading) {
+  const isLoading = isLoadingDoctor || isLoadingSlots;
+
+  if (isLoading) {
     return <View style={styles.loaderContainer}><ActivityIndicator size="large" color="#008B8B" /></View>;
   }
 
-  if (!doctor) {
-    return <View style={styles.loaderContainer}><Text>Doktor bilgileri bulunamadı.</Text></View>;
+  if (isErrorDoctor || isErrorSlots || !doctor) {
+    return <View style={styles.loaderContainer}><Text>Doktor bilgileri yüklenemedi.</Text></View>;
   }
 
   return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-
         <Modal
             animationType="fade"
             transparent={true}
@@ -161,7 +135,7 @@ const DoktorDetayScreen = ({ route, navigation }) => {
                 <MaterialIcons name="event-available" size={32} color="#008B8B" />
               </View>
               <Text style={styles.modalTitle}>Randevuyu Onayla</Text>
-              {selectedSlot && (
+              {selectedSlot && selectedDate && doctor && (
                   <Text style={styles.modalText}>
                     <Text style={{fontFamily: FONTS.inter.bold}}>{`${doctor.title} ${doctor.user.firstName} ${doctor.user.lastName}`}</Text> için
                     <Text style={{fontFamily: FONTS.inter.bold, color: '#008B8B'}}> {doctor.clinic.name}</Text> polikliniğinde,
@@ -226,48 +200,42 @@ const DoktorDetayScreen = ({ route, navigation }) => {
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Müsait Saatler</Text>
-              {slotsLoading ? (
-                  <ActivityIndicator style={{ marginTop: 20 }} color="#008B8B" />
-              ) : (
-                  <View style={styles.timeGrid}>
-                    {slots.length > 0 ? slots.map((slot) => {
-                      const isSelected = selectedSlot?.id === slot.id;
-                      const isBooked = slot.status === 'BOOKED';
-                      const isToday = selectedDate && selectedDate.toDateString() === new Date().toDateString();
-                      const isPast = isToday && new Date(slot.startTime) < new Date();
-
-                      return (
-                          <TouchableOpacity
-                              key={slot.id}
-                              style={[
-                                styles.timeItem,
-                                (isBooked || isPast) && styles.bookedTime,
-                                isSelected && styles.selectedTime
-                              ]}
-                              onPress={() => setSelectedSlot(slot)}
-                              disabled={isBooked || isPast}
-                          >
-                            <Text style={[
-                              styles.timeText,
-                              (isBooked || isPast) && styles.bookedTimeText,
-                              isSelected && styles.selectedTimeText
-                            ]}>
-                              {formatTime(slot.startTime)}
-                            </Text>
-                          </TouchableOpacity>
-                      );
-                    }) : (
-                        <Text style={styles.noSlotsText}>Bu tarih için müsait randevu bulunmamaktadır.</Text>
-                    )}
-                  </View>
-              )}
+              <View style={styles.timeGrid}>
+                {slotsForSelectedDate.length > 0 ? slotsForSelectedDate.map((slot) => {
+                  const isSelected = selectedSlot?.id === slot.id;
+                  const isBooked = slot.status === 'BOOKED';
+                  const isPast = new Date(slot.startTime) < new Date();
+                  return (
+                      <TouchableOpacity
+                          key={slot.id}
+                          style={[
+                            styles.timeItem,
+                            (isBooked || isPast) && styles.bookedTime,
+                            isSelected && styles.selectedTime
+                          ]}
+                          onPress={() => setSelectedSlot(slot)}
+                          disabled={isBooked || isPast}
+                      >
+                        <Text style={[
+                          styles.timeText,
+                          (isBooked || isPast) && styles.bookedTimeText,
+                          isSelected && styles.selectedTimeText
+                        ]}>
+                          {formatTime(slot.startTime)}
+                        </Text>
+                      </TouchableOpacity>
+                  );
+                }) : (
+                    <Text style={styles.noSlotsText}>Bu tarih için müsait randevu bulunmamaktadır.</Text>
+                )}
+              </View>
             </View>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={[styles.bookButton, !selectedSlot && styles.disabledButton]} onPress={handleBookingPress} disabled={!selectedSlot}>
-            <Text style={styles.bookButtonText}>Randevu Al</Text>
+          <TouchableOpacity style={[styles.bookButton, !selectedSlot && styles.disabledButton]} onPress={handleBookingPress} disabled={!selectedSlot || isBooking}>
+            {isBooking ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookButtonText}>Randevu Al</Text>}
           </TouchableOpacity>
         </View>
       </SafeAreaView>

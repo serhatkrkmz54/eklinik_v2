@@ -121,7 +121,7 @@ const ProfileScreen = () => {
   return (
       <SafeAreaView style={styles.container}>
         <ScrollView
-            contentContainerStyle={{flexGrow: 1}}
+            contentContainerStyle={{flexGrow: 1, paddingBottom: 125}}
             refreshControl={
               <RefreshControl
                   refreshing={refreshing}
