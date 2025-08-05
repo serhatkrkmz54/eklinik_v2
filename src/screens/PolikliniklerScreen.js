@@ -144,7 +144,7 @@ const PolikliniklerScreen = () => {
   );
 
   useEffect(() => {
-    const WEBSOCKET_URL = 'http://192.168.1.33:8080/ws';
+    const WEBSOCKET_URL = 'http://192.168.1.190:8080/ws';
     const client = new Client({
       webSocketFactory: () => new SockJS(WEBSOCKET_URL),
       onConnect: () => {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getToken } from './authStorage';
 
-const API_URL = 'http://192.168.1.33:8080/api';
+const API_URL = 'http://192.168.1.190:8080/api';
 
 export const fetcher = (key) => {
     // Eğer key bir dizi ise (slots isteği gibi), onu ayrıştır.
