@@ -22,14 +22,11 @@
       "package": "com.eklinik.app",
       "versionCode": 1,
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE"
+        "ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyCHJBO103UtEJaKzSxwW2hkD4QP2cLSKrc"
+          "apiKey": "AIzaSyDY99ZFeStzZTxrA1h-CV3izi69G2aFcz4"
         }
       }
     },
