@@ -31,6 +31,8 @@ import AmbulansCagirScreen from './src/screens/AmbulansCagirScreen';
 import TumDoktorlarEkrani from './src/screens/DoktorlarScreen';
 import DoktorlarScreen from './src/screens/DoktorlarScreen';
 import EditProfileScreen from "./src/screens/EditProfileScreen";
+// --- ADDED: Import the new screen ---
+import AppointmentDetailScreen from "./src/screens/AppointmentDetailScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,9 +44,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     const animatedValue = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-
         const toValue = state.index * tabWidth + (tabWidth - indicatorWidth) / 2;
-
         Animated.spring(animatedValue, {
             toValue: toValue,
             useNativeDriver: true,
@@ -59,21 +59,17 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                 const { options } = descriptors[route.key];
                 const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
                 const isFocused = state.index === index;
-
                 const onPress = () => {
                     const event = navigation.emit({
                         type: 'tabPress',
                         target: route.key,
                         canPreventDefault: true,
                     });
-
                     if (!isFocused && !event.defaultPrevented) {
                         navigation.navigate(route.name, route.params);
                     }
                 };
-
                 const Icon = (props) => options.tabBarIcon({ ...props, focused: isFocused });
-
                 return (
                     <TouchableOpacity
                         key={route.key}
@@ -111,6 +107,17 @@ const TabNavigator = () => {
                     ),
                 }}
             />
+            {/* --- UPDATED: This tab now points to the same RandevularScreen --- */}
+            <Tab.Screen
+                name='MedicalRecords'
+                component={RandevularScreen}
+                options={{
+                    tabBarLabel: 'Kayıtlarım',
+                    tabBarIcon: ({ color, size }) => (
+                        <MaterialIcons name='folder-copy' size={size} color={color} />
+                    ),
+                }}
+            />
             <Tab.Screen
                 name='Calendar'
                 component={RandevularScreen}
@@ -141,15 +148,11 @@ const AppStack = () => (
         <Stack.Screen name="Doktorlar" component={DoktorlarScreen} />
         <Stack.Screen name="DoktorDetay" component={DoktorDetay} />
         <Stack.Screen name='Randevular' component={RandevularScreen} />
-        <Stack.Screen
-            name='AmbulansCagir'
-            component={AmbulansCagirScreen}
-        />
-        <Stack.Screen
-            name='TumDoktorlarEkrani'
-            component={TumDoktorlarEkrani}
-        />
+        <Stack.Screen name='AmbulansCagir' component={AmbulansCagirScreen} />
+        <Stack.Screen name='TumDoktorlarEkrani' component={TumDoktorlarEkrani} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        {/* --- ADDED: The new detail screen to the stack --- */}
+        <Stack.Screen name="AppointmentDetail" component={AppointmentDetailScreen} />
     </Stack.Navigator>
 );
 
@@ -166,7 +169,6 @@ const AuthStack = () => (
 const AppRouter = () => {
     const { userToken, isLoading } = useContext(AuthContext);
     const insets = useSafeAreaInsets();
-
     if (isLoading) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -174,7 +176,6 @@ const AppRouter = () => {
             </View>
         );
     }
-
     return (
         <View style={{ flex: 1, paddingTop: insets.top }}>
             <NavigationContainer>

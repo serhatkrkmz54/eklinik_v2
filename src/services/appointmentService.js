@@ -21,3 +21,12 @@ export const cancelAppointment = async (appointmentId) => {
         throw error.response?.data || { message: 'Randevu iptal edilemedi.' };
     }
 };
+
+export const getMyAppointmentDetails = async (appointmentId) => {
+    try {
+        const response = await api.get(`/patient/appointments/${appointmentId}/details`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || { message: 'Randevu detayları alınamadı.' };
+    }
+};
